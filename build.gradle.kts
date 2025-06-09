@@ -32,6 +32,7 @@ dependencies {
 //    implementation("com.auth0:java-jwt:4.5.0")
 
     // DB
+    // todo needed?
     runtimeOnly("org.postgresql:postgresql")
     testImplementation("com.h2database:h2:2.3.232")
     
