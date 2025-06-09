@@ -20,6 +20,8 @@ repositories {
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter")
+    implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
 
@@ -28,6 +30,10 @@ dependencies {
     
     // Authentication
 //    implementation("com.auth0:java-jwt:4.5.0")
+
+    // DB
+    runtimeOnly("org.postgresql:postgresql")
+    testImplementation("com.h2database:h2:2.3.232")
     
     // FP / Error Handling
     implementation("io.arrow-kt:arrow-core:2.0.1")
