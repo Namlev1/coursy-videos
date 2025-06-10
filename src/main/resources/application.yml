@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: client-video-service
+  servlet:
+    multipart:
+      max-file-size: 500MB        # Maximum size for a single file
+      max-request-size: 500MB     # Maximum size for the entire request
+      enabled: true
+    
+minio:
+  endpoint: ${MINIO_ENDPOINT:http://localhost:11000}
+  access-key: ${MINIO_ACCESS_KEY:minioadmin}
+  secret-key: ${MINIO_SECRET_KEY:minioadmin}
+  bucket-name: ${MINIO_BUCKET_NAME:videos}
