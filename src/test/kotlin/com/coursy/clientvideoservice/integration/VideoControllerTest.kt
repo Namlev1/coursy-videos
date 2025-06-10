@@ -1,7 +1,7 @@
 package com.coursy.clientvideoservice.integration
 
 import io.kotest.core.spec.style.BehaviorSpec
-import jakarta.transaction.Transactional
+//import jakarta.transaction.Transactional
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.ActiveProfiles
@@ -9,7 +9,7 @@ import org.springframework.test.context.ActiveProfiles
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@Transactional
+//@Transactional
 class VideoControllerTest : BehaviorSpec() {
 
     val url = "/v1/videos"
