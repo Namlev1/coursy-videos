@@ -5,14 +5,19 @@ import arrow.core.getOrElse
 import arrow.core.left
 import com.coursy.clientvideoservice.failure.Failure
 import com.coursy.clientvideoservice.failure.FileFailure
+import com.coursy.clientvideoservice.model.Metadata
+import com.coursy.clientvideoservice.repository.MetadataRepository
 import com.coursy.clientvideoservice.types.ContentType
 import com.coursy.clientvideoservice.types.FileName
+import jakarta.transaction.Transactional
 import org.springframework.stereotype.Service
 import org.springframework.web.multipart.MultipartFile
 
 @Service
+@Transactional
 class VideoService(
     private val minioService: MinIOService,
+    private val metadataRepository: MetadataRepository,
 ) {
     fun saveVideo(
         file: MultipartFile,
@@ -26,6 +31,17 @@ class VideoService(
         val contentType = ContentType.fromFile(file).getOrElse { return it.left() }
         val path = "$userId/$course/${fileName.value}"
 
+        // Save metadata first
+        val metadata = Metadata(
+            title = fileName.value,
+            path = path,
+            course = course,
+            userId = userId,
+            fileSize = file.size,
+        )
+        metadataRepository.save(metadata)
+
+        // Save file in MinIO
         return minioService.uploadFile(
             path = path,
             inputStream = file.inputStream,
