@@ -1,5 +1,7 @@
 package com.coursy.clientvideoservice.failure
 
+import com.coursy.clientvideoservice.types.ContentType
+
 sealed class FileFailure : Failure {
     data object Empty : FileFailure()
     data object NoName : FileFailure()
@@ -9,6 +11,7 @@ sealed class FileFailure : Failure {
     data object NoExtension : FileFailure()
     data object InvalidExtension : FileFailure()
     data object InvalidCharacters: FileFailure()
+    data object NoContentType : FileFailure()
 
     override fun message(): String = when (this) {
         is Empty -> "File is empty."
@@ -19,5 +22,6 @@ sealed class FileFailure : Failure {
         is NoExtension -> "File contains no extension."
         is InvalidExtension -> "Only .mp4 video format is supported."
         is InvalidCharacters -> "Filename contains invalid characters."
+        is NoContentType -> "File contains no content type."
     }
 }

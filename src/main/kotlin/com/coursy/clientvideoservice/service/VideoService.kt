@@ -1,10 +1,12 @@
 package com.coursy.clientvideoservice.service
 
 import arrow.core.Either
+import arrow.core.getOrElse
 import arrow.core.left
-import arrow.core.right
 import com.coursy.clientvideoservice.failure.Failure
 import com.coursy.clientvideoservice.failure.FileFailure
+import com.coursy.clientvideoservice.types.ContentType
+import com.coursy.clientvideoservice.types.FileName
 import org.springframework.stereotype.Service
 import org.springframework.web.multipart.MultipartFile
 
@@ -16,17 +18,13 @@ class VideoService(
         if (file.isEmpty) {
             return FileFailure.Empty.left()
         }
-        val fileName = file.originalFilename ?: return FileFailure.NoName.left()
-        
-        val contentType = file.contentType
-        if (contentType != "video/mp4") {
-            return FileFailure.InvalidContentType.left()
-        }
+        val fileName = FileName.fromFile(file).getOrElse { return it.left() }
+        val contentType = ContentType.fromFile(file).getOrElse { return it.left() }
 
         return minioService.uploadFile(
-            fileName = fileName,
+            fileName = fileName.value,
             inputStream = file.inputStream,
-            contentType = contentType,
+            contentType = contentType.value,
             size = file.size
         )
     }
