@@ -1,16 +1,14 @@
 package com.coursy.clientvideoservice.failure
 
-import com.coursy.clientvideoservice.types.ContentType
-
 sealed class FileFailure : Failure {
     data object Empty : FileFailure()
     data object NoName : FileFailure()
     data class NameTooShort(val minLength: Int) : FileFailure()
-    data class NameTooLong(val maxLength: Int): FileFailure()
+    data class NameTooLong(val maxLength: Int) : FileFailure()
     data object InvalidContentType : FileFailure()
     data object NoExtension : FileFailure()
     data object InvalidExtension : FileFailure()
-    data object InvalidCharacters: FileFailure()
+    data object InvalidCharacters : FileFailure()
     data object NoContentType : FileFailure()
 
     override fun message(): String = when (this) {

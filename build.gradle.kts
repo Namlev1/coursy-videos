@@ -25,6 +25,10 @@ dependencies {
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
 
+    // Swagger
+    implementation("io.swagger.core.v3:swagger-annotations:2.2.31")
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0")
+
     // Security
 //    implementation("org.springframework.boot:spring-boot-starter-security")
     

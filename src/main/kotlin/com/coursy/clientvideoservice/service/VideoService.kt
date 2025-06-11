@@ -3,7 +3,6 @@ package com.coursy.clientvideoservice.service
 import arrow.core.Either
 import arrow.core.getOrElse
 import arrow.core.left
-import com.coursy.clientvideoservice.dto.VideoUploadRequest
 import com.coursy.clientvideoservice.failure.Failure
 import com.coursy.clientvideoservice.failure.FileFailure
 import com.coursy.clientvideoservice.types.ContentType
@@ -18,7 +17,7 @@ class VideoService(
     fun saveVideo(
         file: MultipartFile,
         userId: Long,
-        course: String
+        course: String,
     ): Either<Failure, String> {
         if (file.isEmpty) {
             return FileFailure.Empty.left()
