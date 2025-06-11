@@ -47,23 +47,23 @@ class MinIOService(
     }
 
     fun uploadFile(
-        fileName: String,
+        path: String,
         inputStream: InputStream,
         contentType: String,
         size: Long
-    ): Either<MinIoFailure, Unit> = runCatching {
+    ): Either<MinIoFailure, String> = runCatching {
         minioClient.putObject(
             PutObjectArgs.builder()
                 .bucket(bucketName)
-                .`object`(fileName)
+                .`object`(path)
                 .stream(inputStream, size, -1)
                 .contentType(contentType)
                 .build()
         )
     }.fold(
-        onSuccess = { Unit.right() },
+        onSuccess = { path.right() },
         onFailure = { exception ->
-            logger.error("Error uploading file: $fileName", exception)
+            logger.error("Error uploading file: $path", exception)
             MinIoFailure(exception.message).left()
         }
     )
