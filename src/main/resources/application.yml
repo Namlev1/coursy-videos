@@ -1,6 +1,13 @@
 spring:
   application:
     name: client-video-service
+  datasource:
+    url: jdbc:postgresql://localhost:9010/videos_db
+    username: postgres
+    password: postgres
+  jpa:
+    hibernate:
+      ddl-auto: update
   servlet:
     multipart:
       max-file-size: 500MB        # Maximum size for a single file
