@@ -1,6 +1,7 @@
 package com.coursy.clientvideoservice.controller
 
-import com.coursy.clientvideoservice.service.MinIOService
+import com.coursy.clientvideoservice.service.VideoService
+import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestMapping
@@ -11,36 +12,19 @@ import org.springframework.web.multipart.MultipartFile
 @RestController
 @RequestMapping("/videos")
 class ContentController(
-    private val minioService: MinIOService
+    private val videoService: VideoService
 ) {
 
     @PostMapping("/upload")
     fun uploadVideo(
         @RequestParam("file") file: MultipartFile
-    ): ResponseEntity<VideoUploadResponse> {
-
-        if (file.isEmpty) {
-            return ResponseEntity.badRequest().build()
-        }
-
-        val fileName = file.originalFilename ?: "video"
-
-        return try {
-            val fileUrl = minioService.uploadFile(
-                fileName = fileName,
-                inputStream = file.inputStream,
-                contentType = file.contentType ?: "video/mp4",
-                size = file.size
+    ): ResponseEntity<Any> {
+        return videoService
+            .saveVideo(file)
+            .fold(
+                { failure -> ResponseEntity.badRequest().body(failure.message()) },
+                { ResponseEntity.status(HttpStatus.CREATED).build() }
             )
 
-            ResponseEntity.ok(VideoUploadResponse(fileName, fileUrl))
-        } catch (e: Exception) {
-            ResponseEntity.internalServerError().build()
-        }
     }
 }
-
-data class VideoUploadResponse(
-    val fileName: String,
-    val fileUrl: String
-)

@@ -1,5 +1,9 @@
 package com.coursy.clientvideoservice.service
 
+import arrow.core.Either
+import arrow.core.left
+import arrow.core.right
+import com.coursy.clientvideoservice.failure.MinIoFailure
 import io.minio.BucketExistsArgs
 import io.minio.MakeBucketArgs
 import io.minio.MinioClient
@@ -47,24 +51,20 @@ class MinIOService(
         inputStream: InputStream,
         contentType: String,
         size: Long
-    ): String {
-        try {
-            minioClient.putObject(
-                PutObjectArgs.builder()
-                    .bucket(bucketName)
-                    .`object`(fileName)
-                    .stream(inputStream, size, -1)
-                    .contentType(contentType)
-                    .build()
-            )
-            return generateFileUrl(fileName)
-        } catch (e: Exception) {
-            logger.error("Error uploading file: $fileName", e)
-            throw RuntimeException("Failed to upload file", e)
+    ): Either<MinIoFailure, Unit> = runCatching {
+        minioClient.putObject(
+            PutObjectArgs.builder()
+                .bucket(bucketName)
+                .`object`(fileName)
+                .stream(inputStream, size, -1)
+                .contentType(contentType)
+                .build()
+        )
+    }.fold(
+        onSuccess = { Unit.right() },
+        onFailure = { exception ->
+            logger.error("Error uploading file: $fileName", exception)
+            MinIoFailure(exception.message).left()
         }
-    }
-
-    private fun generateFileUrl(fileName: String): String {
-        return "${endpoint}/${bucketName}/$fileName"
-    }
+    )
 }
