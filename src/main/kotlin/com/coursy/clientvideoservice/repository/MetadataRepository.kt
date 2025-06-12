@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor
 
 interface MetadataRepository : JpaRepository<Metadata, Long>, JpaSpecificationExecutor<Metadata>
 
-class VideoSpecification {
+class MetadataSpecification {
     companion object {
         fun builder() = Builder()
     }
@@ -15,10 +15,10 @@ class VideoSpecification {
     class Builder {
         private val predicates = mutableListOf<Specification<Metadata>>()
 
-        fun courseName(courseName: String?) = apply {
-            courseName?.let {
+        fun courseName(course: String?) = apply {
+            course?.let {
                 predicates.add { root, _, cb ->
-                    cb.equal(root.get<String>("courseName"), it)
+                    cb.equal(root.get<String>("course"), it)
                 }
             }
         }
@@ -27,6 +27,14 @@ class VideoSpecification {
             userId?.let {
                 predicates.add { root, _, cb ->
                     cb.equal(root.get<Long>("userId"), it)
+                }
+            }
+        }
+
+        fun fileName(fileName: String?) = apply {
+            fileName?.let {
+                predicates.add { root, _, cb ->
+                    cb.equal(root.get<Long>("title"), it)
                 }
             }
         }

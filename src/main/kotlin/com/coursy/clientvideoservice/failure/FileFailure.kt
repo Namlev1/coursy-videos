@@ -10,6 +10,7 @@ sealed class FileFailure : Failure {
     data object InvalidExtension : FileFailure()
     data object InvalidCharacters : FileFailure()
     data object NoContentType : FileFailure()
+    data object AlreadyExists : FileFailure()
 
     override fun message(): String = when (this) {
         is Empty -> "File is empty."
@@ -21,5 +22,6 @@ sealed class FileFailure : Failure {
         is InvalidExtension -> "Only .mp4 video format is supported."
         is InvalidCharacters -> "Filename contains invalid characters."
         is NoContentType -> "File contains no content type."
+        is AlreadyExists -> "File of this name already exists in this course"
     }
 }

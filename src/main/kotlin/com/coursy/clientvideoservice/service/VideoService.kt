@@ -9,6 +9,7 @@ import com.coursy.clientvideoservice.failure.Failure
 import com.coursy.clientvideoservice.failure.FileFailure
 import com.coursy.clientvideoservice.model.Metadata
 import com.coursy.clientvideoservice.repository.MetadataRepository
+import com.coursy.clientvideoservice.repository.MetadataSpecification
 import com.coursy.clientvideoservice.types.ContentType
 import com.coursy.clientvideoservice.types.FileName
 import jakarta.transaction.Transactional
@@ -36,7 +37,10 @@ class VideoService(
         val contentType = ContentType.fromFile(file).getOrElse { return it.left() }
         val path = "$userId/$course/${fileName.value}"
 
-        // todo: check if this video exists in DB first (use specialization)
+        if (fileAlreadyExists(fileName, userId, course)) {
+            return FileFailure.AlreadyExists.left()
+        }
+
         // Save metadata first
         var metadata = Metadata(
             title = fileName.value,
@@ -60,4 +64,19 @@ class VideoService(
         metadataRepository.findAll(pageRequest)
             .map { it.toResponse() }
             .let { pagedResourcesAssembler.toModel(it) }
+
+    private fun fileAlreadyExists(
+        fileName: FileName,
+        userId: Long,
+        course: String,
+    ): Boolean {
+        val specification = MetadataSpecification
+            .builder()
+            .fileName(fileName.value)
+            .userId(userId)
+            .courseName(course)
+            .build()
+
+        return metadataRepository.exists(specification)
+    }
 }
