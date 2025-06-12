@@ -28,7 +28,7 @@ class VideoService(
         file: MultipartFile,
         userId: Long,
         course: String,
-    ): Either<Failure, String> {
+    ): Either<Failure, MetadataResponse> {
         if (file.isEmpty) {
             return FileFailure.Empty.left()
         }
@@ -36,15 +36,16 @@ class VideoService(
         val contentType = ContentType.fromFile(file).getOrElse { return it.left() }
         val path = "$userId/$course/${fileName.value}"
 
+        // todo: check if this video exists in DB first (use specialization)
         // Save metadata first
-        val metadata = Metadata(
+        var metadata = Metadata(
             title = fileName.value,
             path = path,
             course = course,
             userId = userId,
             fileSize = file.size,
         )
-        metadataRepository.save(metadata)
+        metadata = metadataRepository.save(metadata)
 
         // Save file in MinIO
         return minioService.uploadFile(
@@ -52,7 +53,7 @@ class VideoService(
             inputStream = file.inputStream,
             contentType = contentType.value,
             size = file.size
-        )
+        ).map { metadata.toResponse() }
     }
 
     fun getPage(pageRequest: PageRequest) =

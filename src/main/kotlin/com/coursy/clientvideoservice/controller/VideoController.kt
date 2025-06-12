@@ -1,7 +1,7 @@
 package com.coursy.clientvideoservice.controller
 
+import com.coursy.clientvideoservice.dto.MetadataResponse
 import com.coursy.clientvideoservice.dto.VideoUploadRequest
-import com.coursy.clientvideoservice.dto.VideoUploadResponse
 import com.coursy.clientvideoservice.service.VideoService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.media.Content
@@ -32,7 +32,7 @@ class VideoController(
                 description = "Video uploaded successfully",
                 content = [Content(
                     mediaType = MediaType.APPLICATION_JSON_VALUE,
-                    schema = Schema(implementation = VideoUploadResponse::class)
+                    schema = Schema(implementation = MetadataResponse::class)
                 )]
             ),
             ApiResponse(
@@ -56,11 +56,15 @@ class VideoController(
                 request.courseName
             )
             .fold(
-                { failure -> ResponseEntity.badRequest().body(failure.message()) },
-                { path ->
+                { failure ->
+                    ResponseEntity
+                        .badRequest()
+                        .body(failure.message())
+                },
+                { metadataResponse ->
                     ResponseEntity
                         .status(HttpStatus.CREATED)
-                        .body(VideoUploadResponse(path))
+                        .body(metadataResponse)
                 }
             )
     }

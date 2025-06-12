@@ -1,7 +1,6 @@
 package com.coursy.clientvideoservice.controller
 
 import com.coursy.clientvideoservice.dto.MetadataResponse
-import com.coursy.clientvideoservice.dto.VideoUploadResponse
 import com.coursy.clientvideoservice.service.VideoService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.media.Content
@@ -62,7 +61,7 @@ class MetadataController(
                 description = "Fetched video metadata successfully",
                 content = [Content(
                     mediaType = MediaType.APPLICATION_JSON_VALUE,
-                    schema = Schema(implementation = VideoUploadResponse::class)
+                    schema = Schema(implementation = MetadataResponse::class)
                 )]
             ),
             ApiResponse(
@@ -83,10 +82,10 @@ class MetadataController(
             ApiResponse(
                 responseCode = "200",
                 description = "Video metadata updated successfully",
-//                content = [Content(
-//                    mediaType = MediaType.APPLICATION_JSON_VALUE,
-//                    schema = Schema(implementation = VideoUploadResponse::class)
-//                )]
+                content = [Content(
+                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                    schema = Schema(implementation = MetadataResponse::class)
+                )]
             ),
             ApiResponse(
                 responseCode = "404",
@@ -110,10 +109,6 @@ class MetadataController(
             ApiResponse(
                 responseCode = "204",
                 description = "Video deleted successfully",
-//                content = [Content(
-//                    mediaType = MediaType.APPLICATION_JSON_VALUE,
-//                    schema = Schema(implementation = VideoUploadResponse::class)
-//                )]
             ),
             ApiResponse(
                 responseCode = "404",
