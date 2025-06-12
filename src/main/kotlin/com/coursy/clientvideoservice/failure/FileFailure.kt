@@ -11,6 +11,7 @@ sealed class FileFailure : Failure {
     data object InvalidCharacters : FileFailure()
     data object NoContentType : FileFailure()
     data object AlreadyExists : FileFailure()
+    data object InvalidId : FileFailure()
 
     override fun message(): String = when (this) {
         is Empty -> "File is empty."
@@ -23,5 +24,6 @@ sealed class FileFailure : Failure {
         is InvalidCharacters -> "Filename contains invalid characters."
         is NoContentType -> "File contains no content type."
         is AlreadyExists -> "File of this name already exists in this course"
+        is InvalidId -> "File with given ID does not exist"
     }
 }

@@ -3,6 +3,7 @@ package com.coursy.clientvideoservice.service
 import arrow.core.Either
 import arrow.core.getOrElse
 import arrow.core.left
+import arrow.core.right
 import com.coursy.clientvideoservice.dto.MetadataResponse
 import com.coursy.clientvideoservice.dto.toResponse
 import com.coursy.clientvideoservice.failure.Failure
@@ -12,6 +13,7 @@ import com.coursy.clientvideoservice.repository.MetadataRepository
 import com.coursy.clientvideoservice.repository.MetadataSpecification
 import com.coursy.clientvideoservice.types.ContentType
 import com.coursy.clientvideoservice.types.FileName
+import com.coursy.clientvideoservice.utils.toEither
 import jakarta.transaction.Transactional
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.web.PagedResourcesAssembler
@@ -59,6 +61,13 @@ class VideoService(
             size = file.size
         ).map { metadata.toResponse() }
     }
+
+    fun getVideo(videoId: Long): Either<FileFailure, MetadataResponse> =
+        metadataRepository.findById(videoId)
+            .toEither(
+                { FileFailure.InvalidId.left() },
+                { it.toResponse().right() }
+            )
 
     fun getPage(pageRequest: PageRequest) =
         metadataRepository.findAll(pageRequest)

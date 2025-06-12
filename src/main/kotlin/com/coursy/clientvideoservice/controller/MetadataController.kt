@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.data.domain.PageRequest
+import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
@@ -71,10 +72,13 @@ class MetadataController(
         ]
     )
     @GetMapping("/{videoId}")
-    fun getVideo(@PathVariable videoId: String): ResponseEntity<Any> {
-        TODO()
-    }
-
+    fun getVideo(@PathVariable videoId: Long) =
+        videoService
+            .getVideo(videoId)
+            .fold(
+                { error -> ResponseEntity.status(HttpStatus.NOT_FOUND).body(error.message()) },
+                { response -> ResponseEntity.ok(response) }
+            )
 
     @Operation(summary = "Update video metadata")
     @ApiResponses(
