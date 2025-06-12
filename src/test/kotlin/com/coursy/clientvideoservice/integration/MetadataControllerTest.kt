@@ -10,7 +10,7 @@ import org.springframework.test.context.ActiveProfiles
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 //@Transactional
-class ContentControllerTest : BehaviorSpec() {
+class MetadataControllerTest : BehaviorSpec() {
 
     val url = "/v1/videos"
 
@@ -24,8 +24,8 @@ class ContentControllerTest : BehaviorSpec() {
         }
 
         given("video with given ID in system") {
-            `when`("retrieving video details"){
-                then("should return video details"){
+            `when`("retrieving video metadata") {
+                then("should return video metadata") {
                     TODO()
                 }
             }
@@ -35,8 +35,8 @@ class ContentControllerTest : BehaviorSpec() {
                     TODO()
                 }
             }
-            
-            `when`("updating video details"){
+
+            `when`("updating video metadata") {
                 then("should return 200 with new metadata"){
                     TODO()
                 }
@@ -64,46 +64,6 @@ class ContentControllerTest : BehaviorSpec() {
 
             `when`("deleting video"){
                 then("should return 404 with IdNotExists"){
-                    TODO()
-                }
-            }
-        }
-        
-        given("user is sending correct file"){
-            `when`("sending POST /videos/upload"){
-                then("the file is saved, metadata is returned"){
-                    TODO()
-                }
-            }
-        }
-
-        given("user is sending incorrect file extension"){
-            `when`("sending POST /videos/upload"){
-                then("should return 400 with InvalidFileFormat"){
-                    TODO()
-                }
-            }
-        }
-
-        given("user is sending malicious content with .mp4 extension"){
-            `when`("sending POST /videos/upload"){
-                then("should return 400 with InvalidFileContent"){
-                    TODO()
-                }
-            }
-        }
-
-        given("user is sending too big file"){
-            `when`("sending POST /videos/upload"){
-                then("should return 413 with FileTooBig"){
-                    TODO()
-                }
-            }
-        }
-
-        given("platform has 50MB free space"){
-            `when`("user sends 100MB file"){
-                then("should return 403"){
                     TODO()
                 }
             }

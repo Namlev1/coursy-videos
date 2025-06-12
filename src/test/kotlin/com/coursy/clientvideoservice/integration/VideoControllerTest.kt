@@ -15,6 +15,47 @@ class VideoControllerTest : BehaviorSpec() {
     val url = "/v1/videos"
 
     init {
+
+        given("user is uploading correct file") {
+            `when`("POST /videos/upload") {
+                then("the file is saved, metadata is returned") {
+                    TODO()
+                }
+            }
+        }
+
+        given("user is uploading incorrect file extension") {
+            `when`("POST /videos/upload") {
+                then("should return 400 with InvalidFileFormat") {
+                    TODO()
+                }
+            }
+        }
+
+        given("user is uploading malicious content with .mp4 extension") {
+            `when`("POST /videos/upload") {
+                then("should return 400 with InvalidFileContent") {
+                    TODO()
+                }
+            }
+        }
+
+        given("user is uploading too big file") {
+            `when`("POST /videos/upload") {
+                then("should return 413 with FileTooBig") {
+                    TODO()
+                }
+            }
+        }
+
+        given("platform has 50MB free space") {
+            `when`("user is uploading 100MB file") {
+                then("should return 403") {
+                    TODO()
+                }
+            }
+        }
+        
         given("requested video is not in the system") {
             `when`("streaming video") {
                 then("should return 404 with IdNotExists") {
