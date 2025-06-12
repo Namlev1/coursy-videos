@@ -3,6 +3,7 @@ plugins {
     kotlin("plugin.spring") version "2.1.0"
     id("org.springframework.boot") version "3.5.0"
     id("io.spring.dependency-management") version "1.1.7"
+    kotlin("plugin.jpa") version "2.0.0"
 }
 
 group = "com.coursy"
@@ -24,24 +25,24 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
-
+    implementation("org.springframework.boot:spring-boot-starter-hateoas")
+    
     // Swagger
     implementation("io.swagger.core.v3:swagger-annotations:2.2.31")
-    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0")
-
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.9")
     // Security
 //    implementation("org.springframework.boot:spring-boot-starter-security")
-    
+
     // Authentication
 //    implementation("com.auth0:java-jwt:4.5.0")
 
     // DB
     runtimeOnly("org.postgresql:postgresql")
     testImplementation("com.h2database:h2:2.3.232")
-    
+
     // minIo
     implementation("io.minio:minio:8.5.17")
-    
+
     // FP / Error Handling
     implementation("io.arrow-kt:arrow-core:2.0.1")
 
@@ -63,13 +64,11 @@ dependencies {
     // Testing - Additional Assertions
     testImplementation("io.kotest.extensions:kotest-assertions-arrow:2.0.0")
 }
-
 kotlin {
     compilerOptions {
         freeCompilerArgs.addAll("-Xjsr305=strict")
     }
 }
-
 tasks.withType<Test> {
     useJUnitPlatform()
 }

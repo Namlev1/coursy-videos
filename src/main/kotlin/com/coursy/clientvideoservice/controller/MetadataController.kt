@@ -1,10 +1,16 @@
 package com.coursy.clientvideoservice.controller
 
+import com.coursy.clientvideoservice.dto.MetadataResponse
+import com.coursy.clientvideoservice.dto.VideoUploadResponse
 import com.coursy.clientvideoservice.service.VideoService
 import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.media.Content
+import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
+import org.springframework.data.domain.PageRequest
+import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
@@ -24,10 +30,10 @@ class MetadataController(
             ApiResponse(
                 responseCode = "200",
                 description = "Fetched video page successfully",
-//                content = [Content(
-//                    mediaType = MediaType.APPLICATION_JSON_VALUE,
-//                    schema = Schema(implementation = VideoUploadResponse::class)
-//                )]
+                content = [Content(
+                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                    schema = Schema(implementation = MetadataResponse::class)
+                )]
             ),
             ApiResponse(
                 responseCode = "400",
@@ -36,8 +42,16 @@ class MetadataController(
         ]
     )
     @GetMapping
-    fun getAllVideos(): ResponseEntity<Any> {
-        TODO()
+    fun getVideoPage(
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "10") size: Int,
+    ): ResponseEntity<Any> {
+        return when {
+            arePageParamsInvalid(page, size) -> ResponseEntity.badRequest().build()
+            else -> PageRequest.of(page, size)
+                .let { page -> videoService.getPage(page) }
+                .let { response -> ResponseEntity.ok(response) }
+        }
     }
 
     @Operation(summary = "Get video metadata")
@@ -46,10 +60,10 @@ class MetadataController(
             ApiResponse(
                 responseCode = "200",
                 description = "Fetched video metadata successfully",
-//                content = [Content(
-//                    mediaType = MediaType.APPLICATION_JSON_VALUE,
-//                    schema = Schema(implementation = VideoUploadResponse::class)
-//                )]
+                content = [Content(
+                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                    schema = Schema(implementation = VideoUploadResponse::class)
+                )]
             ),
             ApiResponse(
                 responseCode = "404",
@@ -111,4 +125,7 @@ class MetadataController(
     fun deleteVideo(@PathVariable videoId: String): ResponseEntity<Any> {
         TODO()
     }
+
+    private fun arePageParamsInvalid(page: Int, size: Int) =
+        page < 0 || size <= 0
 }

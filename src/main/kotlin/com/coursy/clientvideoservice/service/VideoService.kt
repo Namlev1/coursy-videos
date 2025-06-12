@@ -3,6 +3,8 @@ package com.coursy.clientvideoservice.service
 import arrow.core.Either
 import arrow.core.getOrElse
 import arrow.core.left
+import com.coursy.clientvideoservice.dto.MetadataResponse
+import com.coursy.clientvideoservice.dto.toResponse
 import com.coursy.clientvideoservice.failure.Failure
 import com.coursy.clientvideoservice.failure.FileFailure
 import com.coursy.clientvideoservice.model.Metadata
@@ -10,6 +12,8 @@ import com.coursy.clientvideoservice.repository.MetadataRepository
 import com.coursy.clientvideoservice.types.ContentType
 import com.coursy.clientvideoservice.types.FileName
 import jakarta.transaction.Transactional
+import org.springframework.data.domain.PageRequest
+import org.springframework.data.web.PagedResourcesAssembler
 import org.springframework.stereotype.Service
 import org.springframework.web.multipart.MultipartFile
 
@@ -18,6 +22,7 @@ import org.springframework.web.multipart.MultipartFile
 class VideoService(
     private val minioService: MinIOService,
     private val metadataRepository: MetadataRepository,
+    private val pagedResourcesAssembler: PagedResourcesAssembler<MetadataResponse>,
 ) {
     fun saveVideo(
         file: MultipartFile,
@@ -49,4 +54,9 @@ class VideoService(
             size = file.size
         )
     }
+
+    fun getPage(pageRequest: PageRequest) =
+        metadataRepository.findAll(pageRequest)
+            .map { it.toResponse() }
+            .let { pagedResourcesAssembler.toModel(it) }
 }
