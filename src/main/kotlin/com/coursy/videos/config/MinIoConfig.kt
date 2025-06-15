@@ -1,4 +1,4 @@
-package com.coursy.clientvideoservice.config
+package com.coursy.videos.config
 
 import io.minio.MinioClient
 import org.springframework.beans.factory.annotation.Value

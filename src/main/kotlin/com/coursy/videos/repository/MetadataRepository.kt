@@ -1,6 +1,6 @@
-package com.coursy.clientvideoservice.repository
+package com.coursy.videos.repository
 
-import com.coursy.clientvideoservice.model.Metadata
+import com.coursy.videos.model.Metadata
 import org.springframework.data.jpa.domain.Specification
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor

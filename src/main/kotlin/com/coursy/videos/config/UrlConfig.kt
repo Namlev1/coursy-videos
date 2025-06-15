@@ -1,4 +1,4 @@
-package com.coursy.clientvideoservice.config
+package com.coursy.videos.config
 
 import org.springframework.context.annotation.Configuration
 import org.springframework.web.bind.annotation.RestController

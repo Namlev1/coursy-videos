@@ -1,4 +1,4 @@
-package com.coursy.clientvideoservice.model
+package com.coursy.videos.model
 
 import jakarta.persistence.*
 import org.hibernate.Hibernate

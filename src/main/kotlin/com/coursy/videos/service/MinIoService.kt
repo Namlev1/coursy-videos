@@ -1,9 +1,9 @@
-package com.coursy.clientvideoservice.service
+package com.coursy.videos.service
 
 import arrow.core.Either
 import arrow.core.left
 import arrow.core.right
-import com.coursy.clientvideoservice.failure.MinIoFailure
+import com.coursy.videos.failure.MinIoFailure
 import io.minio.BucketExistsArgs
 import io.minio.MakeBucketArgs
 import io.minio.MinioClient

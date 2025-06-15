@@ -1,8 +1,8 @@
-package com.coursy.clientvideoservice.controller
+package com.coursy.videos.controller
 
-import com.coursy.clientvideoservice.dto.MetadataResponse
-import com.coursy.clientvideoservice.dto.VideoUploadRequest
-import com.coursy.clientvideoservice.service.VideoService
+import com.coursy.videos.dto.MetadataResponse
+import com.coursy.videos.dto.VideoUploadRequest
+import com.coursy.videos.service.VideoService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema

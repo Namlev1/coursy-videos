@@ -1,1 +1,1 @@
-rootProject.name = "client-video-service"
+rootProject.name = "videos"

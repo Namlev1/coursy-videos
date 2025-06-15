@@ -1,6 +1,6 @@
-package com.coursy.clientvideoservice.dto
+package com.coursy.videos.dto
 
-import com.coursy.clientvideoservice.model.Metadata
+import com.coursy.videos.model.Metadata
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.LocalDateTime
 

@@ -1,4 +1,4 @@
-package com.coursy.clientvideoservice.failure
+package com.coursy.videos.failure
 
 sealed class FileFailure : Failure {
     data object Empty : FileFailure()

@@ -1,4 +1,4 @@
-package com.coursy.clientvideoservice.integration
+package com.coursy.videos.integration
 
 import io.kotest.core.spec.style.BehaviorSpec
 //import jakarta.transaction.Transactional

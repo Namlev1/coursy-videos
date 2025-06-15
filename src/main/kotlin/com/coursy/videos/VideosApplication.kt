@@ -1,11 +1,11 @@
-package com.coursy.clientvideoservice
+package com.coursy.videos
 
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
 
 @SpringBootApplication
-class ClientVideoServiceApplication
+class VideosApplication
 
 fun main(args: Array<String>) {
-    runApplication<ClientVideoServiceApplication>(*args)
+    runApplication<VideosApplication>(*args)
 }

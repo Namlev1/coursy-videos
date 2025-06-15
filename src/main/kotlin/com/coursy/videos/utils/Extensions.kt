@@ -1,4 +1,4 @@
-package com.coursy.clientvideoservice.utils
+package com.coursy.videos.utils
 
 import java.util.*
 

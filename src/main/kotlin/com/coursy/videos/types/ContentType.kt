@@ -1,9 +1,9 @@
-package com.coursy.clientvideoservice.types
+package com.coursy.videos.types
 
 import arrow.core.Either
 import arrow.core.left
 import arrow.core.right
-import com.coursy.clientvideoservice.failure.FileFailure
+import com.coursy.videos.failure.FileFailure
 import org.springframework.web.multipart.MultipartFile
 
 @JvmInline
