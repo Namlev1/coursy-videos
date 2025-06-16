@@ -19,6 +19,7 @@ import org.springframework.data.domain.PageRequest
 import org.springframework.data.web.PagedResourcesAssembler
 import org.springframework.stereotype.Service
 import org.springframework.web.multipart.MultipartFile
+import java.io.InputStream
 
 @Service
 @Transactional
@@ -60,6 +61,21 @@ class VideoService(
             contentType = contentType.value,
             size = file.size
         ).map { metadata.toResponse() }
+    }
+
+    fun downloadVideo(
+        fileName: String,
+        userId: Long,
+        course: String,
+    ): Either<Failure, InputStream> {
+        val fileName = FileName.fromString(fileName).getOrElse { return it.left() }
+        val path = "$userId/$course/${fileName.value}"
+
+        if (!fileAlreadyExists(fileName, userId, course)) {
+            return FileFailure.NotFound.left()
+        }
+
+        return minioService.downloadFile(path)
     }
 
     fun getVideo(videoId: Long): Either<FileFailure, MetadataResponse> =

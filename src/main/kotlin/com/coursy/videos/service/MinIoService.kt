@@ -4,23 +4,21 @@ import arrow.core.Either
 import arrow.core.left
 import arrow.core.right
 import com.coursy.videos.failure.MinIoFailure
-import io.minio.BucketExistsArgs
-import io.minio.MakeBucketArgs
-import io.minio.MinioClient
-import io.minio.PutObjectArgs
+import io.minio.*
 import jakarta.annotation.PostConstruct
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import java.io.InputStream
 
+// TODO: Better error handling
 @Service
 class MinIOService(
     private val minioClient: MinioClient,
     @Value("\${minio.bucket-name:videos}")
     private val bucketName: String,
     @Value("\${minio.endpoint:http://localhost:11000}")
-    private val endpoint: String
+    private val endpoint: String,
 ) {
     private val logger = LoggerFactory.getLogger(MinIOService::class.java)
 
@@ -50,7 +48,7 @@ class MinIOService(
         path: String,
         inputStream: InputStream,
         contentType: String,
-        size: Long
+        size: Long,
     ): Either<MinIoFailure, String> = runCatching {
         minioClient.putObject(
             PutObjectArgs.builder()
@@ -64,6 +62,23 @@ class MinIOService(
         onSuccess = { path.right() },
         onFailure = { exception ->
             logger.error("Error uploading file: $path", exception)
+            MinIoFailure(exception.message).left()
+        }
+    )
+
+    fun downloadFile(
+        path: String,
+    ): Either<MinIoFailure, InputStream> = runCatching {
+        minioClient.getObject(
+            GetObjectArgs.builder()
+                .bucket(bucketName)
+                .`object`(path)
+                .build()
+        )
+    }.fold(
+        onSuccess = { inputStream -> inputStream.right() },
+        onFailure = { exception ->
+            logger.error("Error downloading file: $path", exception)
             MinIoFailure(exception.message).left()
         }
     )

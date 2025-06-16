@@ -1,6 +1,7 @@
 package com.coursy.videos.controller
 
 import com.coursy.videos.dto.MetadataResponse
+import com.coursy.videos.dto.VideoDownloadRequest
 import com.coursy.videos.dto.VideoUploadRequest
 import com.coursy.videos.service.VideoService
 import io.swagger.v3.oas.annotations.Operation
@@ -9,10 +10,10 @@ import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
-import org.springframework.http.HttpStatus
-import org.springframework.http.MediaType
-import org.springframework.http.ResponseEntity
+import org.springframework.http.*
 import org.springframework.web.bind.annotation.*
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody
+
 
 @RestController
 @RequestMapping("/videos")
@@ -108,7 +109,7 @@ class VideoController(
                 responseCode = "200",
                 description = "Video download started successfully",
                 content = [Content(
-                    mediaType = MediaType.APPLICATION_OCTET_STREAM_VALUE
+                    mediaType = "video/mp4"
                 )]
             ),
             ApiResponse(
@@ -117,9 +118,41 @@ class VideoController(
             )
         ]
     )
-    @GetMapping("/{id}/download")
-    fun downloadVideo(@PathVariable id: String): ResponseEntity<Any> {
-        TODO()
+    @GetMapping("/download")
+    fun downloadVideo(
+        // TODO: GET cannot have body, so convert it to params
+        @RequestBody request: VideoDownloadRequest,
+    ): ResponseEntity<StreamingResponseBody> {
+        return videoService
+            .downloadVideo(request.fileName, request.userId, request.courseName)
+            .fold(
+                { failure ->
+                    // I must keep ResponseEntity<StreamingResponseBody> and not <Any>,
+                    // so this is a workaround.
+                    val errorBody = StreamingResponseBody { outputStream ->
+                        outputStream.write(failure.message().toByteArray())
+                    }
+                    ResponseEntity.badRequest()
+                        .contentType(MediaType.TEXT_PLAIN)
+                        .body(errorBody)
+                },
+                { inputStream ->
+                    val streamingBody = StreamingResponseBody { outputStream ->
+                        inputStream.use { input ->
+                            input.copyTo(outputStream)
+                        }
+                    }
+
+                    val headers = HttpHeaders()
+                    headers.contentType = MediaType.parseMediaType("video/mp4")
+                    headers.contentDisposition = ContentDisposition
+                        .attachment()
+                        .filename(request.fileName)
+                        .build()
+
+                    ResponseEntity(streamingBody, headers, HttpStatus.OK)
+                }
+            )
     }
 
     @Operation(summary = "Get video thumbnail")

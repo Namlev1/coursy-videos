@@ -26,6 +26,18 @@ value class FileName private constructor(val value: String) {
                 .map(::FileName)
         }
 
+        fun fromString(fileName: String): Either<FileFailure, FileName> {
+            if (fileName.isEmpty() || fileName.isBlank()) {
+                return FileFailure.NoName.left()
+            }
+
+            return fileName
+                .validateLength()
+                .flatMap { it.validateExtension() }
+                .flatMap { it.validateCharacters() }
+                .map(::FileName)
+        }
+
         private fun String.validateLength(): Either<FileFailure, String> = when {
             length < MIN_LENGTH -> FileFailure.NameTooShort(MIN_LENGTH).left()
             length > MAX_LENGTH -> FileFailure.NameTooLong(MAX_LENGTH).left()
