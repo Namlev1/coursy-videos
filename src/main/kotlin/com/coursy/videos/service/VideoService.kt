@@ -5,6 +5,7 @@ import arrow.core.getOrElse
 import arrow.core.left
 import arrow.core.right
 import com.coursy.videos.dto.MetadataResponse
+import com.coursy.videos.dto.StreamData
 import com.coursy.videos.dto.StreamingResult
 import com.coursy.videos.dto.toResponse
 import com.coursy.videos.failure.Failure
@@ -52,7 +53,7 @@ class VideoService(
 
         // Save metadata first
         var metadata = Metadata(
-            title = fileName.value,
+            title = fileName,
             path = path,
             course = course,
             userId = userId,
@@ -69,20 +70,34 @@ class VideoService(
         ).map { metadata.toResponse() }
     }
 
-    fun downloadVideo(
-        fileName: String,
+    fun getVideoStream(
+        videoId: UUID,
         userId: Long,
         course: String,
-    ): Either<Failure, InputStream> {
+    ): Either<Failure, StreamData> {
         // TODO authorization: users can only download its videos, ADMIN can download any.
-        val fileName = FileName.fromString(fileName).getOrElse { return it.left() }
+        val metadata = metadataRepository.findById(videoId).getOrElse { return FileFailure.InvalidId.left() }
+        val fileSize = metadata.fileSize
+        val fileName = metadata.title
+        
         val path = "$userId/$course/${fileName.value}"
 
-        if (!fileAlreadyExists(fileName, userId, course)) {
-            return FileFailure.NotFound.left()
-        }
 
-        return minioService.downloadFile(path)
+        return minioService
+            .getFileStream(path)
+            .map { inputStream ->
+                val streamingBody = StreamingResponseBody { outputStream ->
+                    inputStream.use { input ->
+                        input.copyTo(outputStream)
+                    }
+                }
+
+                StreamData(
+                    streamingBody,
+                    fileSize,
+                    fileName
+                )
+            }
     }
 
     fun streamVideo(
@@ -98,7 +113,7 @@ class VideoService(
         val path = "${metadata.userId}/${metadata.course}/${metadata.title}"
 
         return minioService
-            .downloadFile(path)
+            .getFileStream(path)
             .map { inputStream ->
                 // Pomiń pierwsze 'start' bajtów
                 var skipped = 0L

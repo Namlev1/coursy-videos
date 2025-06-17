@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody
 import java.util.*
 
+@CrossOrigin(origins = ["*"])
 @RestController
 @RequestMapping("/videos")
 @Tag(
@@ -145,14 +146,14 @@ class VideoController(
             )
         ]
     )
-    @GetMapping("/{fileName}/download")
+    @GetMapping("/{id}/download")
     fun downloadVideo(
         @Parameter(
-            description = "Video filename to download",
+            description = "Video ID",
             required = true,
-            example = "intro-kotlin.mp4"
+            example = "intro-kotlin.mp4" //todo docs
         )
-        @PathVariable fileName: String,
+        @PathVariable id: UUID,
 
         @Parameter(
             description = "ID of the user possessing the video",
@@ -169,7 +170,7 @@ class VideoController(
         @RequestParam courseName: String,
     ): ResponseEntity<StreamingResponseBody> {
         return videoService
-            .downloadVideo(fileName, userId, courseName)
+            .getVideoStream(id, userId, courseName)
             .fold(
                 { failure ->
                     // I must keep ResponseEntity<StreamingResponseBody> and not <Any>,
@@ -181,21 +182,16 @@ class VideoController(
                         .contentType(MediaType.TEXT_PLAIN)
                         .body(errorBody)
                 },
-                { inputStream ->
-                    val streamingBody = StreamingResponseBody { outputStream ->
-                        inputStream.use { input ->
-                            input.copyTo(outputStream)
-                        }
-                    }
-
+                { downloadResult ->
                     val headers = HttpHeaders()
                     headers.contentType = MediaType.parseMediaType("video/mp4")
+                    headers.contentLength = downloadResult.fileSize
                     headers.contentDisposition = ContentDisposition
                         .attachment()
-                        .filename(fileName)
+                        .filename(downloadResult.fileName.value)
                         .build()
 
-                    ResponseEntity(streamingBody, headers, HttpStatus.OK)
+                    ResponseEntity(downloadResult.streamingBody, headers, HttpStatus.OK)
                 }
             )
     }

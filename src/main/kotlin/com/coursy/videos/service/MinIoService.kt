@@ -66,7 +66,7 @@ class MinIOService(
         }
     )
 
-    fun downloadFile(
+    fun getFileStream(
         path: String,
     ): Either<MinIoFailure, InputStream> = runCatching {
         minioClient.getObject(
