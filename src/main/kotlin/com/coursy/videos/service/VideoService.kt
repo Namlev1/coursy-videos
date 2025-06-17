@@ -20,6 +20,7 @@ import org.springframework.data.web.PagedResourcesAssembler
 import org.springframework.stereotype.Service
 import org.springframework.web.multipart.MultipartFile
 import java.io.InputStream
+import java.util.*
 
 @Service
 @Transactional
@@ -79,7 +80,13 @@ class VideoService(
         return minioService.downloadFile(path)
     }
 
-    fun getVideo(videoId: Long): Either<FileFailure, MetadataResponse> =
+    fun streamVideo(
+        fileId: String,
+    ): Either<Failure, InputStream> {
+        TODO()
+    }
+
+    fun getVideo(videoId: UUID): Either<FileFailure, MetadataResponse> =
         metadataRepository.findById(videoId)
             .toEither(
                 { FileFailure.InvalidId.left() },

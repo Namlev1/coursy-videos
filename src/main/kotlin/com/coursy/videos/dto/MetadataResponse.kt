@@ -3,15 +3,16 @@ package com.coursy.videos.dto
 import com.coursy.videos.model.Metadata
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.LocalDateTime
+import java.util.*
 
 @Schema(description = "Response containing comprehensive video metadata information")
 data class MetadataResponse(
     @Schema(
         description = "Unique identifier for the video metadata record",
-        example = "12345",
+        example = "f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
         required = true
     )
-    val id: Long,
+    val id: UUID,
 
     @Schema(
         description = "Title of the video",
@@ -65,7 +66,7 @@ data class MetadataResponse(
 )
 
 fun Metadata.toResponse() = MetadataResponse(
-    id = this.id ?: 0,
+    id = this.id ?: UUID.randomUUID(),
     title = this.title,
     path = this.path,
     course = this.course,

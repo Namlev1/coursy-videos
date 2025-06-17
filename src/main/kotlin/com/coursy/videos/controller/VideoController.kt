@@ -98,7 +98,12 @@ class VideoController(
         ]
     )
     @GetMapping("/{id}/stream")
-    fun streamVideo(@PathVariable id: String): ResponseEntity<Any> {
+    fun streamVideo(
+        @Parameter(description = "Video ID", example = "123")
+        @PathVariable id: String,
+        @RequestHeader(value = "Range", required = false) range: String?,
+    ): ResponseEntity<StreamingResponseBody> {
+//        return videoService.streamVideo(id)
         TODO()
     }
 

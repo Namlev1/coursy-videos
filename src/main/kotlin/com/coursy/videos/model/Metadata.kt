@@ -3,12 +3,13 @@ package com.coursy.videos.model
 import jakarta.persistence.*
 import org.hibernate.Hibernate
 import java.time.LocalDateTime
+import java.util.*
 
 @Entity
 data class Metadata(
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    val id: Long? = null,
+    @GeneratedValue(strategy = GenerationType.UUID)
+    val id: UUID? = null,
 
     @Column(nullable = false)
     val title: String,

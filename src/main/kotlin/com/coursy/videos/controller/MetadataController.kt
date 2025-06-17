@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
+import java.util.*
 
 @RestController
 @RequestMapping("/videos")
@@ -72,7 +73,7 @@ class MetadataController(
         ]
     )
     @GetMapping("/{videoId}")
-    fun getVideo(@PathVariable videoId: Long) =
+    fun getVideo(@PathVariable videoId: UUID) =
         videoService
             .getVideo(videoId)
             .fold(
