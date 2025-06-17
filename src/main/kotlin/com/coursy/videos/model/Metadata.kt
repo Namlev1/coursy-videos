@@ -1,5 +1,6 @@
 package com.coursy.videos.model
 
+import com.coursy.videos.types.FileName
 import jakarta.persistence.*
 import org.hibernate.Hibernate
 import java.time.LocalDateTime
@@ -12,7 +13,7 @@ data class Metadata(
     val id: UUID? = null,
 
     @Column(nullable = false)
-    val title: String,
+    val title: FileName,
 
     @Column(nullable = false)
     val path: String, // MinIO object key
