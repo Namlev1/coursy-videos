@@ -68,6 +68,7 @@ class VideoService(
         userId: Long,
         course: String,
     ): Either<Failure, InputStream> {
+        // TODO authorization: users can only download its videos, ADMIN can download any.
         val fileName = FileName.fromString(fileName).getOrElse { return it.left() }
         val path = "$userId/$course/${fileName.value}"
 

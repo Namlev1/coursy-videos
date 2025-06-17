@@ -1,10 +1,10 @@
 package com.coursy.videos.controller
 
 import com.coursy.videos.dto.MetadataResponse
-import com.coursy.videos.dto.VideoDownloadRequest
 import com.coursy.videos.dto.VideoUploadRequest
 import com.coursy.videos.service.VideoService
 import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
@@ -118,13 +118,31 @@ class VideoController(
             )
         ]
     )
-    @GetMapping("/download")
+    @GetMapping("/{fileName}/download")
     fun downloadVideo(
-        // TODO: GET cannot have body, so convert it to params
-        @RequestBody request: VideoDownloadRequest,
+        @Parameter(
+            description = "Video filename to download",
+            required = true,
+            example = "intro-kotlin.mp4"
+        )
+        @PathVariable fileName: String,
+
+        @Parameter(
+            description = "ID of the user possessing the video",
+            required = true,
+            example = "123"
+        )
+        @RequestParam userId: Long,
+
+        @Parameter(
+            description = "Name of the course this video belongs to",
+            required = true,
+            example = "Spring Boot Fundamentals"
+        )
+        @RequestParam courseName: String,
     ): ResponseEntity<StreamingResponseBody> {
         return videoService
-            .downloadVideo(request.fileName, request.userId, request.courseName)
+            .downloadVideo(fileName, userId, courseName)
             .fold(
                 { failure ->
                     // I must keep ResponseEntity<StreamingResponseBody> and not <Any>,
@@ -147,7 +165,7 @@ class VideoController(
                     headers.contentType = MediaType.parseMediaType("video/mp4")
                     headers.contentDisposition = ContentDisposition
                         .attachment()
-                        .filename(request.fileName)
+                        .filename(fileName)
                         .build()
 
                     ResponseEntity(streamingBody, headers, HttpStatus.OK)
