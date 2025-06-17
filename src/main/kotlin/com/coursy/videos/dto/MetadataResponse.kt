@@ -1,6 +1,7 @@
 package com.coursy.videos.dto
 
 import com.coursy.videos.model.Metadata
+import com.coursy.videos.types.FileName
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.LocalDateTime
 import java.util.*
@@ -19,7 +20,7 @@ data class MetadataResponse(
         example = "Introduction to Spring Boot",
         required = true,
     )
-    val title: String,
+    val title: FileName,
 
     @Schema(
         description = "File system path where the video is stored",
