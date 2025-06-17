@@ -42,8 +42,4 @@ data class Metadata(
     }
 
     override fun hashCode(): Int = javaClass.hashCode()
-
-    override fun toString(): String {
-        return this::class.simpleName + "(  id = $id   ,   title = $title )"
-    }
 }

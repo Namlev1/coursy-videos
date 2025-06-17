@@ -5,9 +5,11 @@ import arrow.core.getOrElse
 import arrow.core.left
 import arrow.core.right
 import com.coursy.videos.dto.MetadataResponse
+import com.coursy.videos.dto.StreamingResult
 import com.coursy.videos.dto.toResponse
 import com.coursy.videos.failure.Failure
 import com.coursy.videos.failure.FileFailure
+import com.coursy.videos.failure.RangeFailure
 import com.coursy.videos.model.Metadata
 import com.coursy.videos.repository.MetadataRepository
 import com.coursy.videos.repository.MetadataSpecification
@@ -19,8 +21,11 @@ import org.springframework.data.domain.PageRequest
 import org.springframework.data.web.PagedResourcesAssembler
 import org.springframework.stereotype.Service
 import org.springframework.web.multipart.MultipartFile
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody
 import java.io.InputStream
+import java.io.OutputStream
 import java.util.*
+import kotlin.jvm.optionals.getOrElse
 
 @Service
 @Transactional
@@ -81,9 +86,46 @@ class VideoService(
     }
 
     fun streamVideo(
-        fileId: String,
-    ): Either<Failure, InputStream> {
-        TODO()
+        fileId: UUID,
+        rangeHeader: String,
+    ): Either<Failure, StreamingResult> {
+        val metadata = metadataRepository.findById(fileId).getOrElse { return FileFailure.InvalidId.left() }
+        val fileSize = metadata.fileSize
+        val (start, end) = parseRange(rangeHeader, fileSize)
+        if (start >= metadata.fileSize - 1)
+            return RangeFailure(start, end).left()
+        val actualEnd = minOf(end, fileSize)
+        val path = "${metadata.userId}/${metadata.course}/${metadata.title}"
+
+        return minioService
+            .downloadFile(path)
+            .map { inputStream ->
+                // Pomiń pierwsze 'start' bajtów
+                var skipped = 0L
+                while (skipped < start) {
+                    val toSkip = minOf(8192, start - skipped) // Skip w blokach 8KB
+                    val actuallySkipped = inputStream.skip(toSkip)
+                    if (actuallySkipped == 0L) break // EOF reached
+                    skipped += actuallySkipped
+                }
+
+                // Skopiuj tylko requested range
+                val bytesToCopy = actualEnd - start + 1
+
+                val streamingBody = StreamingResponseBody { outputStream ->
+                    inputStream.use { input ->
+                        copyLimitedBytes(inputStream, outputStream, bytesToCopy)
+                    }
+                }
+
+                StreamingResult(
+                    streamingBody,
+                    start,
+                    actualEnd,
+                    fileSize
+                )
+            }
+
     }
 
     fun getVideo(videoId: UUID): Either<FileFailure, MetadataResponse> =
@@ -111,5 +153,34 @@ class VideoService(
             .build()
 
         return metadataRepository.exists(specification)
+    }
+
+    private fun parseRange(rangeHeader: String, fileSize: Long): Pair<Long, Long> {
+        // "bytes=0-1023" -> Pair(0, 1023)
+        // "bytes=1024-" -> Pair(1024, fileSize-1)
+        val range = rangeHeader.removePrefix("bytes=")
+        val parts = range.split("-")
+        val start = parts[0].toLongOrNull() ?: 0
+        val end = if (parts[1].isBlank()) fileSize - 1 else parts[1].toLong()
+        return Pair(start, end)
+    }
+
+    private fun copyLimitedBytes(
+        inputStream: InputStream,
+        outputStream: OutputStream,
+        maxBytes: Long,
+    ) {
+        val buffer = ByteArray(8192) // 8KB buffer
+        var totalCopied = 0L
+
+        while (totalCopied < maxBytes) {
+            val bytesToRead = minOf(buffer.size.toLong(), maxBytes - totalCopied).toInt()
+            val bytesRead = inputStream.read(buffer, 0, bytesToRead)
+
+            if (bytesRead == -1) break // EOF
+
+            outputStream.write(buffer, 0, bytesRead)
+            totalCopied += bytesRead
+        }
     }
 }

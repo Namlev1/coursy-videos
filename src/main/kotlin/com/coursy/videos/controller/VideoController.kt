@@ -13,7 +13,7 @@ import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.http.*
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody
-
+import java.util.*
 
 @RestController
 @RequestMapping("/videos")
@@ -100,11 +100,33 @@ class VideoController(
     @GetMapping("/{id}/stream")
     fun streamVideo(
         @Parameter(description = "Video ID", example = "123")
-        @PathVariable id: String,
-        @RequestHeader(value = "Range", required = false) range: String?,
+        @PathVariable id: UUID,
+        @RequestHeader(value = "Range", required = true) rangeHeader: String,
     ): ResponseEntity<StreamingResponseBody> {
-//        return videoService.streamVideo(id)
-        TODO()
+        return videoService
+            .streamVideo(id, rangeHeader)
+            .fold(
+                { failure ->
+                    // TODO KISS
+                    // I must keep ResponseEntity<StreamingResponseBody> and not <Any>,
+                    // so this is a workaround.
+                    val errorBody = StreamingResponseBody { outputStream ->
+                        outputStream.write(failure.message().toByteArray())
+                    }
+                    ResponseEntity.badRequest()
+                        .contentType(MediaType.TEXT_PLAIN)
+                        .body(errorBody)
+                },
+                { streamingResult ->
+
+                    ResponseEntity.ok()
+                        .header("Accept-Ranges", "bytes")
+                        .header("Content-Length", streamingResult.fileSize.toString())
+                        .contentType(MediaType.parseMediaType("video/mp4"))
+                        .body(streamingResult.streamingBody)
+                }
+
+            )
     }
 
     @Operation(summary = "Download video file")
