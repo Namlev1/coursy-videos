@@ -17,7 +17,7 @@ import java.util.*
 
 @CrossOrigin(origins = ["*"])
 @RestController
-@RequestMapping("/videos")
+@RequestMapping("/api/videos")
 @Tag(
     name = "Video Content",
     description = "API for uploading, downloading, streaming and accessing video content"
@@ -71,63 +71,85 @@ class VideoController(
             )
     }
 
-    @Operation(summary = "Stream video content")
-    @ApiResponses(
-        value = [
-            ApiResponse(
-                responseCode = "200",
-                description = "Video stream started successfully",
-                content = [Content(
-                    mediaType = "video/mp4"
-                )]
-            ),
-            ApiResponse(
-                responseCode = "206",
-                description = "Partial content - range request fulfilled",
-                content = [Content(
-                    mediaType = "video/mp4"
-                )]
-            ),
-            ApiResponse(
-                responseCode = "404",
-                description = "Video not found"
-            ),
-            ApiResponse(
-                responseCode = "416",
-                description = "Range not satisfiable"
-            )
-        ]
-    )
-    @GetMapping("/{id}/stream")
-    fun streamVideo(
-        @Parameter(description = "Video ID", example = "123")
-        @PathVariable id: UUID,
-        @RequestHeader(value = "Range", required = true) rangeHeader: String,
+//    @Operation(summary = "Stream video content")
+//    @ApiResponses(
+//        value = [
+//            ApiResponse(
+//                responseCode = "200",
+//                description = "Video stream started successfully",
+//                content = [Content(
+//                    mediaType = "video/mp4"
+//                )]
+//            ),
+//            ApiResponse(
+//                responseCode = "206",
+//                description = "Partial content - range request fulfilled",
+//                content = [Content(
+//                    mediaType = "video/mp4"
+//                )]
+//            ),
+//            ApiResponse(
+//                responseCode = "404",
+//                description = "Video not found"
+//            ),
+//            ApiResponse(
+//                responseCode = "416",
+//                description = "Range not satisfiable"
+//            )
+//        ]
+//    )
+//    @GetMapping("/{id}/stream")
+//    fun streamVideo(
+//        @Parameter(description = "Video ID", example = "123")
+//        @PathVariable id: UUID,
+//        @RequestHeader(value = "Range", required = true) rangeHeader: String,
+//    ): ResponseEntity<StreamingResponseBody> {
+//        return videoService
+//            .streamVideo(id, rangeHeader)
+//            .fold(
+//                { failure ->
+//                    // TODO KISS
+//                    // I must keep ResponseEntity<StreamingResponseBody> and not <Any>,
+//                    // so this is a workaround.
+//                    val errorBody = StreamingResponseBody { outputStream ->
+//                        outputStream.write(failure.message().toByteArray())
+//                    }
+//                    ResponseEntity.badRequest()
+//                        .contentType(MediaType.TEXT_PLAIN)
+//                        .body(errorBody)
+//                },
+//                { streamingResult ->
+//
+//                    ResponseEntity.ok()
+//                        .header("Accept-Ranges", "bytes")
+//                        .header("Content-Length", streamingResult.fileSize.toString())
+//                        .contentType(MediaType.parseMediaType("video/mp4"))
+//                        .body(streamingResult.streamingBody)
+//                }
+//
+//            )
+//    }
+
+    @GetMapping("/{videoId}/stream")
+    fun getMasterPlaylist(@PathVariable videoId: UUID): ResponseEntity<String> {
+        TODO()
+    }
+
+    @GetMapping("/{videoId}/stream/{quality}/playlist.m3u8")
+    fun getQualityPlaylist(
+        @PathVariable videoId: UUID,
+        @PathVariable quality: String
+    ): ResponseEntity<String> {
+        TODO()
+    }
+
+    @GetMapping("/{videoId}/stream/{quality}/{segmentName}")
+    fun getSegment(
+        @PathVariable videoId: UUID,
+        @PathVariable quality: String,
+        @PathVariable segmentName: String
     ): ResponseEntity<StreamingResponseBody> {
-        return videoService
-            .streamVideo(id, rangeHeader)
-            .fold(
-                { failure ->
-                    // TODO KISS
-                    // I must keep ResponseEntity<StreamingResponseBody> and not <Any>,
-                    // so this is a workaround.
-                    val errorBody = StreamingResponseBody { outputStream ->
-                        outputStream.write(failure.message().toByteArray())
-                    }
-                    ResponseEntity.badRequest()
-                        .contentType(MediaType.TEXT_PLAIN)
-                        .body(errorBody)
-                },
-                { streamingResult ->
-
-                    ResponseEntity.ok()
-                        .header("Accept-Ranges", "bytes")
-                        .header("Content-Length", streamingResult.fileSize.toString())
-                        .contentType(MediaType.parseMediaType("video/mp4"))
-                        .body(streamingResult.streamingBody)
-                }
-
-            )
+        TODO()
     }
 
     @Operation(summary = "Download video file")
