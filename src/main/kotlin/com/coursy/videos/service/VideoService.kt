@@ -12,6 +12,7 @@ import com.coursy.videos.failure.Failure
 import com.coursy.videos.failure.FileFailure
 import com.coursy.videos.failure.RangeFailure
 import com.coursy.videos.model.Metadata
+import com.coursy.videos.model.ProcessingStatus
 import com.coursy.videos.repository.MetadataRepository
 import com.coursy.videos.repository.MetadataSpecification
 import com.coursy.videos.types.ContentType
@@ -34,6 +35,7 @@ class VideoService(
     private val minioService: MinIOService,
     private val metadataRepository: MetadataRepository,
     private val pagedResourcesAssembler: PagedResourcesAssembler<MetadataResponse>,
+    private val videoProcessingService: VideoProcessingService
 ) {
     fun saveVideo(
         file: MultipartFile,
@@ -58,16 +60,21 @@ class VideoService(
             course = course,
             userId = userId,
             fileSize = file.size,
+            status = ProcessingStatus.UPLOADED
         )
         metadata = metadataRepository.save(metadata)
 
         // Save file in MinIO
-        return minioService.uploadFile(
+        minioService.uploadFile(
             path = path,
             inputStream = file.inputStream,
             contentType = contentType.value,
             size = file.size
-        ).map { metadata.toResponse() }
+        ).isLeft { return it.left() }
+
+        videoProcessingService.processVideoAsync(metadata, file.inputStream)
+
+        return metadata.toResponse().right()
     }
 
     fun getVideoStream(
@@ -79,7 +86,7 @@ class VideoService(
         val metadata = metadataRepository.findById(videoId).getOrElse { return FileFailure.InvalidId.left() }
         val fileSize = metadata.fileSize
         val fileName = metadata.title
-        
+
         val path = "$userId/$course/${fileName.value}"
 
 
