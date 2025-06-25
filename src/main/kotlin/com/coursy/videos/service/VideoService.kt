@@ -19,8 +19,9 @@ import com.coursy.videos.types.ContentType
 import com.coursy.videos.types.FileName
 import com.coursy.videos.utils.toEither
 import jakarta.transaction.Transactional
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.web.PagedResourcesAssembler
@@ -40,6 +41,10 @@ class VideoService(
     private val pagedResourcesAssembler: PagedResourcesAssembler<MetadataResponse>,
     private val videoProcessingService: VideoProcessingService
 ) {
+    private val processingScope = CoroutineScope(
+        SupervisorJob() + Dispatchers.IO
+    )
+    
     fun saveVideo(
         file: MultipartFile,
         userId: Long,
@@ -76,7 +81,7 @@ class VideoService(
         ).onLeft { return it.left() }
 
         metadataRepository.flush()
-        GlobalScope.launch(Dispatchers.IO) {
+        processingScope.launch {
             videoProcessingService.processVideoAsync(metadata, file.inputStream)
         }
 
