@@ -1,16 +1,17 @@
 package com.coursy.videos.model
 
 import com.coursy.videos.types.FileName
-import jakarta.persistence.*
+import jakarta.persistence.Column
+import jakarta.persistence.Entity
+import jakarta.persistence.Id
 import org.hibernate.Hibernate
 import java.time.LocalDateTime
 import java.util.*
 
 @Entity
-data class Metadata(
+class Metadata(
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    val id: UUID? = null,
+    val id: UUID = UUID.randomUUID(),
 
     @Column(nullable = false)
     val title: FileName,
@@ -30,6 +31,9 @@ data class Metadata(
     @Column(nullable = false)
     val uploadedAt: LocalDateTime = LocalDateTime.now(),
 
+    @Column(nullable = false)
+    var status: ProcessingStatus,
+
     // TODO implement duration with FFmpeg
     @Column
     val duration: Int? = null, // in seconds
@@ -39,8 +43,12 @@ data class Metadata(
         if (other == null || Hibernate.getClass(this) != Hibernate.getClass(other)) return false
         other as Metadata
 
-        return id != null && id == other.id
+        return id == other.id
     }
 
     override fun hashCode(): Int = javaClass.hashCode()
+
+    override fun toString(): String {
+        return "Metadata($title, $id)"
+    }
 }
