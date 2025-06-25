@@ -55,7 +55,7 @@ class VideoService(
         }
         val fileName = FileName.fromFile(file).getOrElse { return it.left() }
         val contentType = ContentType.fromFile(file).getOrElse { return it.left() }
-        val path = "$userId/$course/${fileName.value}"
+        val dir = "$userId/$course/${fileName.withoutExt()}"
 
         if (fileAlreadyExists(fileName, userId, course)) {
             return FileFailure.AlreadyExists.left()
@@ -64,7 +64,7 @@ class VideoService(
         // Save metadata first
         var metadata = Metadata(
             title = fileName,
-            path = path,
+            path = dir,
             course = course,
             userId = userId,
             fileSize = file.size,
@@ -74,7 +74,7 @@ class VideoService(
 
         // Save file in MinIO
         minioService.uploadFile(
-            path = path,
+            path = "$dir/${fileName.value}",
             inputStream = file.inputStream,
             contentType = contentType.value,
             size = file.size

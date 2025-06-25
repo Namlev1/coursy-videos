@@ -46,10 +46,6 @@ class VideoProcessingService(
             val hlsDir = tempDir.resolve("hls")
             Files.createDirectories(hlsDir)
 
-            val masterPlaylistContent = StringBuilder()
-            masterPlaylistContent.appendLine("#EXTM3U")
-            masterPlaylistContent.appendLine("#EXT-X-INDEPENDENT-SEGMENTS")
-
             // todo parallel after you're done with entire method
             for (quality in qualities) {
                 logger.info("Started processing quality ${quality.resolution} for video: ${metadata.id}")
@@ -64,17 +60,25 @@ class VideoProcessingService(
                         return
                     } // todo handle
 
-                // Upload segmentów do MinIO
+                uploadHlsSegments(qualityDir, quality.name, metadata.path)
 
                 // Zapisz jakość do DB
-
-                masterPlaylistContent.appendLine("#EXT-X-STREAM-INF:BANDWIDTH=${quality.bitrate},RESOLUTION=${quality.resolution}")
-                masterPlaylistContent.appendLine("${quality.name}/playlist.m3u8")
 
                 logger.info("Finished processing quality ${quality.resolution} for video: ${metadata.id}")
             }
 
-            // Upload master playlist to minIo
+            val masterPlaylistContent = StringBuilder().apply {
+                appendLine("#EXTM3U")
+                appendLine("#EXT-X-INDEPENDENT-SEGMENTS")
+
+                // Add each quality
+                qualities.forEach { quality ->
+                    appendLine("#EXT-X-STREAM-INF:BANDWIDTH=${quality.bitrate},RESOLUTION=${quality.resolution}")
+                    appendLine("${quality.name}/playlist.m3u8")
+                }
+            }
+            uploadMasterPlaylist(metadata.path, masterPlaylistContent.toString())
+
             // Save qualities
 
             metadata.status = ProcessingStatus.COMPLETED
@@ -131,5 +135,45 @@ class VideoProcessingService(
             .count()
 
         return SegmentInfo(segmentFiles.toInt(), 6.0).right()
+    }
+
+    private fun uploadHlsSegments(hlsDir: Path, qualityName: String, pathPrefix: String) {
+        Files.walk(hlsDir).forEach { file ->
+            if (Files.isRegularFile(file)) {
+                val fileName = file.fileName.toString()
+                val objectPath = "$pathPrefix/$qualityName/$fileName"
+                val inputStream = Files.newInputStream(file)
+
+                minIoService
+                    .uploadFile(
+                        objectPath,
+                        inputStream,
+                        getContentType(fileName),
+                        Files.size(file)
+                    )
+                    .onLeft { logger.error(it.message()) }
+            }
+        }
+    }
+
+    private fun uploadMasterPlaylist(path: String, content: String) {
+        val contentBytes = content.toByteArray()
+
+        minIoService
+            .uploadFile(
+                "$path/master.m3u8",
+                contentBytes.inputStream(),
+                "application/vnd.apple.mpegurl",
+                contentBytes.size.toLong()
+            )
+            .onLeft { logger.error(it.message()) }
+    }
+
+    private fun getContentType(fileName: String): String {
+        return when {
+            fileName.endsWith(".ts") -> "video/mp2t"
+            fileName.endsWith(".m3u8") -> "application/vnd.apple.mpegurl"
+            else -> "application/octet-stream"
+        }
     }
 }

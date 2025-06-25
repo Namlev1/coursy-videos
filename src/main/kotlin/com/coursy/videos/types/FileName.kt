@@ -9,6 +9,8 @@ import org.springframework.web.multipart.MultipartFile
 
 @JvmInline
 value class FileName private constructor(val value: String) {
+    fun withoutExt() = value.substringBeforeLast(".", "")
+    
     companion object {
         private const val MIN_LENGTH = 2
         private const val MAX_LENGTH = 50
