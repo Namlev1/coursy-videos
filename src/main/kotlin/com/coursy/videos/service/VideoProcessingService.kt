@@ -6,7 +6,6 @@ import arrow.core.right
 import com.coursy.videos.failure.FFmpegFailure
 import com.coursy.videos.model.Metadata
 import com.coursy.videos.model.ProcessingStatus
-import com.coursy.videos.model.VideoQuality
 import com.coursy.videos.processing.SegmentInfo
 import com.coursy.videos.processing.VideoQualityConfig
 import com.coursy.videos.repository.MetadataRepository
@@ -22,39 +21,39 @@ class VideoProcessingService(
     private val metadataRepository: MetadataRepository,
 ) {
     private val logger = LoggerFactory.getLogger(VideoProcessingService::class.java)
+    private val qualities = listOf(
+        VideoQualityConfig("480p", "854x480", 800000),
+        VideoQualityConfig("720p", "1280x720", 1400000),
+        VideoQualityConfig("1080p", "1920x1080", 2800000)
+    )
 
-    // todo finish this method, change to runCatching
+    // todo finish this method
     suspend fun processVideoAsync(metadata: Metadata, videoStream: InputStream) {
         logger.info("Started async processing")
-        try {
+
+        val tempDir = Files.createTempDirectory("video_processing_${metadata.id}")
+        runCatching {
             // Update status
             metadata.status = ProcessingStatus.PROCESSING
-            metadataRepository.save(metadata) // todo important?
+            metadataRepository.save(metadata)
 
             // Download z MinIO do temp
-            val tempDir = Files.createTempDirectory("video_processing_${metadata.id}")
             val originalFile = tempDir.resolve("original.mp4")
-
             videoStream.use { stream ->
                 Files.copy(stream, originalFile)
             }
 
-            val qualities = listOf(
-                VideoQualityConfig("480p", "854x480", 800000),
-                VideoQualityConfig("720p", "1280x720", 1400000),
-                VideoQualityConfig("1080p", "1920x1080", 2800000)
-            )
-
             val hlsDir = tempDir.resolve("hls")
             Files.createDirectories(hlsDir)
 
-            mutableListOf<VideoQuality>()
             val masterPlaylistContent = StringBuilder()
             masterPlaylistContent.appendLine("#EXTM3U")
             masterPlaylistContent.appendLine("#EXT-X-INDEPENDENT-SEGMENTS")
 
-            // Przetwarzaj każdą jakość
+            // todo parallel after you're done with entire method
             for (quality in qualities) {
+                logger.info("Started processing quality ${quality.resolution} for video: ${metadata.id}")
+
                 val qualityDir = hlsDir.resolve(quality.name)
                 Files.createDirectories(qualityDir)
 
@@ -66,10 +65,13 @@ class VideoProcessingService(
                     } // todo handle
 
                 // Upload segmentów do MinIO
+
                 // Zapisz jakość do DB
 
                 masterPlaylistContent.appendLine("#EXT-X-STREAM-INF:BANDWIDTH=${quality.bitrate},RESOLUTION=${quality.resolution}")
                 masterPlaylistContent.appendLine("${quality.name}/playlist.m3u8")
+
+                logger.info("Finished processing quality ${quality.resolution} for video: ${metadata.id}")
             }
 
             // Upload master playlist to minIo
@@ -77,15 +79,22 @@ class VideoProcessingService(
 
             metadata.status = ProcessingStatus.COMPLETED
             metadataRepository.save(metadata)
-
-            // Cleanup
-            tempDir.toFile().deleteRecursively()
-
-        } catch (e: Exception) {
-            logger.error("Failed to process video ${metadata.id}", e)
-            metadata.status = ProcessingStatus.FAILED
-            metadataRepository.save(metadata)
         }
+            .fold(
+                onSuccess = {
+                    logger.info("Video processing completed successfully for ${metadata.id}")
+
+                    metadata.status = ProcessingStatus.COMPLETED
+                    metadataRepository.save(metadata)
+                },
+                onFailure = { error ->
+                    logger.error("Failed to process video ${metadata.id}", error)
+                    metadata.status = ProcessingStatus.FAILED
+                    metadataRepository.save(metadata)
+                }
+            )
+
+        tempDir.toFile().deleteRecursively()
         logger.info("Finished async processing")
     }
 
@@ -116,7 +125,7 @@ class VideoProcessingService(
             return FFmpegFailure(exitCode).left()
         }
 
-        // Policz segmenty
+        // Count segments
         val segmentFiles = Files.walk(outputDir)
             .filter { it.toString().endsWith(".ts") }
             .count()
