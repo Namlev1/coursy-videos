@@ -4,7 +4,6 @@ import arrow.core.Either
 import arrow.core.left
 import arrow.core.right
 import com.coursy.videos.failure.FFmpegFailure
-import com.coursy.videos.failure.Failure
 import com.coursy.videos.model.Metadata
 import com.coursy.videos.model.ProcessingStatus
 import com.coursy.videos.model.VideoQuality
@@ -28,7 +27,8 @@ class VideoProcessingService(
     // todo: either async or suspend
     // todo finish this method, change to runCatching
     @Async
-    fun processVideoAsync(metadata: Metadata, videoStream: InputStream): Either<Failure, Unit> {
+    fun processVideoAsync(metadata: Metadata, videoStream: InputStream) {
+        logger.info("Started async processing")
         try {
             // Update status
             metadata.status = ProcessingStatus.PROCESSING
@@ -63,7 +63,10 @@ class VideoProcessingService(
 
                 // FFmpeg command
                 processQuality(originalFile, qualityDir, quality)
-                    .isLeft { return it.left() } // todo handle
+                    .onLeft {
+                        logger.error(it.message())
+                        return
+                    } // todo handle
 
                 // Upload segmentów do MinIO
                 // Zapisz jakość do DB
@@ -86,7 +89,7 @@ class VideoProcessingService(
             metadata.status = ProcessingStatus.FAILED
             metadataRepository.save(metadata)
         }
-        return Unit.right()
+        logger.info("Finished async processing")
     }
 
     private fun processQuality(

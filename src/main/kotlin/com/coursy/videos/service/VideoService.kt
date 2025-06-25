@@ -70,8 +70,9 @@ class VideoService(
             inputStream = file.inputStream,
             contentType = contentType.value,
             size = file.size
-        ).isLeft { return it.left() }
+        ).onLeft { return it.left() }
 
+        metadataRepository.flush()
         videoProcessingService.processVideoAsync(metadata, file.inputStream)
 
         return metadata.toResponse().right()
