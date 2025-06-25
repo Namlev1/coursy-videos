@@ -11,7 +11,6 @@ import com.coursy.videos.processing.SegmentInfo
 import com.coursy.videos.processing.VideoQualityConfig
 import com.coursy.videos.repository.MetadataRepository
 import org.slf4j.LoggerFactory
-import org.springframework.scheduling.annotation.Async
 import org.springframework.stereotype.Service
 import java.io.InputStream
 import java.nio.file.Files
@@ -24,10 +23,8 @@ class VideoProcessingService(
 ) {
     private val logger = LoggerFactory.getLogger(VideoProcessingService::class.java)
 
-    // todo: either async or suspend
     // todo finish this method, change to runCatching
-    @Async
-    fun processVideoAsync(metadata: Metadata, videoStream: InputStream) {
+    suspend fun processVideoAsync(metadata: Metadata, videoStream: InputStream) {
         logger.info("Started async processing")
         try {
             // Update status

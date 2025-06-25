@@ -19,6 +19,9 @@ import com.coursy.videos.types.ContentType
 import com.coursy.videos.types.FileName
 import com.coursy.videos.utils.toEither
 import jakarta.transaction.Transactional
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.web.PagedResourcesAssembler
 import org.springframework.stereotype.Service
@@ -73,7 +76,9 @@ class VideoService(
         ).onLeft { return it.left() }
 
         metadataRepository.flush()
-        videoProcessingService.processVideoAsync(metadata, file.inputStream)
+        GlobalScope.launch(Dispatchers.IO) {
+            videoProcessingService.processVideoAsync(metadata, file.inputStream)
+        }
 
         return metadata.toResponse().right()
     }
