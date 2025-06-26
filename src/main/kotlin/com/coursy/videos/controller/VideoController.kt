@@ -132,9 +132,21 @@ class VideoController(
 
     @GetMapping("/{videoId}/stream")
     fun getMasterPlaylist(@PathVariable videoId: UUID): ResponseEntity<String> {
-        TODO()
+        return videoService
+            .getMasterPlaylist(videoId)
+            .fold(
+                { failure ->
+                    ResponseEntity.badRequest()
+                        .contentType(MediaType.TEXT_PLAIN)
+                        .body(failure.message())
+                },
+                { playlistContent ->
+                    ResponseEntity.ok()
+                        .contentType(MediaType.parseMediaType("application/vnd.apple.mpegurl"))
+                        .body(playlistContent)  // Return String directly
+                }
+            )
     }
-
     @GetMapping("/{videoId}/stream/{quality}/playlist.m3u8")
     fun getQualityPlaylist(
         @PathVariable videoId: UUID,

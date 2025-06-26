@@ -10,6 +10,7 @@ import com.coursy.videos.dto.StreamingResult
 import com.coursy.videos.dto.toResponse
 import com.coursy.videos.failure.Failure
 import com.coursy.videos.failure.FileFailure
+import com.coursy.videos.failure.MetadataFailure
 import com.coursy.videos.failure.RangeFailure
 import com.coursy.videos.model.Metadata
 import com.coursy.videos.model.ProcessingStatus
@@ -44,7 +45,7 @@ class VideoService(
     private val processingScope = CoroutineScope(
         SupervisorJob() + Dispatchers.IO
     )
-    
+
     fun saveVideo(
         file: MultipartFile,
         userId: Long,
@@ -172,6 +173,22 @@ class VideoService(
         metadataRepository.findAll(pageRequest)
             .map { it.toResponse() }
             .let { pagedResourcesAssembler.toModel(it) }
+
+    // todo don't download if processing is not finished
+    fun getMasterPlaylist(videoId: UUID): Either<Failure, String> {
+        val metadata = metadataRepository
+            .findById(videoId)
+            .getOrElse { return MetadataFailure.NotFound.left() }
+        val path = metadata.path + "/master.m3u8"
+
+        return minioService
+            .getFileStream(path)
+            .map { inputStream ->
+                inputStream.use { stream ->
+                    stream.bufferedReader(Charsets.UTF_8).readText()
+                }
+            }
+    }
 
     private fun fileAlreadyExists(
         fileName: FileName,
