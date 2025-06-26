@@ -78,6 +78,7 @@ class VideoProcessingService(
 
             val masterPlaylistContent = StringBuilder().apply {
                 appendLine("#EXTM3U")
+                appendLine("#EXT-X-VERSION:3")
                 appendLine("#EXT-X-INDEPENDENT-SEGMENTS")
 
                 // Add each quality
