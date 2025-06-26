@@ -5,12 +5,12 @@ import arrow.core.getOrElse
 import arrow.core.left
 import arrow.core.right
 import com.coursy.videos.failure.FFmpegFailure
-import com.coursy.videos.model.Metadata
-import com.coursy.videos.model.ProcessingStatus
-import com.coursy.videos.model.VideoQuality
+import com.coursy.videos.failure.Failure
+import com.coursy.videos.model.*
 import com.coursy.videos.processing.SegmentInfo
 import com.coursy.videos.processing.VideoQualityConfig
 import com.coursy.videos.repository.MetadataRepository
+import com.coursy.videos.repository.ThumbnailRepository
 import com.coursy.videos.repository.VideoQualityRepository
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -22,7 +22,8 @@ import java.nio.file.Path
 class VideoProcessingService(
     private val minIoService: MinIOService,
     private val metadataRepository: MetadataRepository,
-    private val videoQualityRepository: VideoQualityRepository
+    private val videoQualityRepository: VideoQualityRepository,
+    private val thumbnailRepository: ThumbnailRepository
 ) {
     private val logger = LoggerFactory.getLogger(VideoProcessingService::class.java)
     private val qualities = listOf(
@@ -94,6 +95,13 @@ class VideoProcessingService(
                 return //todo handle
             }
             metadata.duration = duration
+
+            val thumbnails = generateThumbnails(originalFile, tempDir, metadata)
+                .getOrElse {
+                    logger.error(it.message())
+                    return // todo handle
+                }
+            thumbnailRepository.saveAll(thumbnails)
 
             metadata.status = ProcessingStatus.COMPLETED
             metadataRepository.save(metadata)
@@ -210,5 +218,72 @@ class VideoProcessingService(
             fileName.endsWith(".m3u8") -> "application/vnd.apple.mpegurl"
             else -> "application/octet-stream"
         }
+    }
+    private fun generateThumbnails(
+        inputFile: Path,
+        outputDir: Path,
+        metadata: Metadata
+    ): Either<Failure, List<Thumbnail>> {
+        val videoDurationSeconds = metadata.duration
+        val thumbnailsDir = outputDir.resolve("thumbnails")
+        Files.createDirectories(thumbnailsDir)
+
+        val thumbnails = mutableListOf<Thumbnail>()
+
+        // Generate thumbnails at different timestamps (10%, 25%, 50% of video)
+        val timestamps = listOf(
+            videoDurationSeconds * 0.1,
+            videoDurationSeconds * 0.25,
+            videoDurationSeconds * 0.5
+        )
+
+        for (timestamp in timestamps) {
+            for (size in ThumbnailType.entries) {
+                val outputFile = thumbnailsDir.resolve("${timestamp.toInt()}_${size.name.lowercase()}.jpg")
+
+                val command = listOf(
+                    "ffmpeg",
+                    "-i", inputFile.toString(),
+                    "-ss", timestamp.toString(),                    // Seek to timestamp
+                    "-vframes", "1",                               // Extract 1 frame
+                    "-vf", "scale=${size.width}:${size.height}",   // Resize
+                    "-q:v", "2",                                   // High quality (1-31, lower = better)
+                    "-y",                                          // Overwrite output files
+                    outputFile.toString()
+                )
+
+                val process = ProcessBuilder(command).start()
+                val exitCode = process.waitFor()
+
+                if (exitCode != 0) {
+                    return FFmpegFailure.ProcessingError(exitCode).left()
+                }
+
+                val objectPath = "${metadata.path}/thumbnails/${timestamp.toInt()}_${size.name.lowercase()}.jpg"
+
+                Files.newInputStream(outputFile).use { inputStream ->
+                    minIoService.uploadFile(
+                        objectPath,
+                        inputStream,
+                        "image/jpeg",
+                        Files.size(outputFile)
+                    ).onLeft {
+                        logger.error("Failed to upload thumbnail: ${it.message()}")
+                        return it.left()
+                    }
+                }
+
+                thumbnails.add(
+                    Thumbnail(
+                        metadata = metadata,
+                        path = outputFile.toString(),
+                        timestampSeconds = timestamp,
+                        thumbnailType = size,
+                    )
+                )
+            }
+        }
+
+        return thumbnails.right()
     }
 }
