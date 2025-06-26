@@ -1,21 +1,24 @@
 package com.coursy.videos.model
 
-import jakarta.persistence.*
+import com.coursy.videos.processing.SegmentInfo
+import com.coursy.videos.processing.VideoQualityConfig
+import jakarta.persistence.Entity
+import jakarta.persistence.Id
+import jakarta.persistence.ManyToOne
 import org.hibernate.Hibernate
 import java.util.*
 
 @Entity
 class VideoQuality(
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    val id: UUID? = null,
+    val id: UUID = UUID.randomUUID(),
 
     @ManyToOne
     val metadata: Metadata,
 
-    val resolution: String, // "1920x1080", "1280x720"
-    val bitrate: Int,       // 2800000
-    val playlistPath: String, // "videos/tenant1/hls/1080p/playlist.m3u8"
+    val resolution: String,
+    val bitrate: Int,
+    val playlistPath: String,
 
     val segmentCount: Int,
     val avgSegmentDuration: Double
@@ -25,9 +28,22 @@ class VideoQuality(
         if (other == null || Hibernate.getClass(this) != Hibernate.getClass(other)) return false
         other as VideoQuality
 
-        return id != null && id == other.id
+        return id == other.id
     }
 
     override fun hashCode(): Int = javaClass.hashCode()
 
+    constructor(
+        config: VideoQualityConfig,
+        segmentInfo: SegmentInfo,
+        metadata: Metadata
+    ) : this(
+        id = UUID.randomUUID(),
+        metadata = metadata,
+        resolution = config.resolution,
+        bitrate = config.bitrate,
+        playlistPath = "${metadata.path}/${config.name}",
+        segmentCount = segmentInfo.segmentCount,
+        avgSegmentDuration = segmentInfo.avgDuration
+    )
 } 

@@ -1,14 +1,17 @@
 package com.coursy.videos.service
 
 import arrow.core.Either
+import arrow.core.getOrElse
 import arrow.core.left
 import arrow.core.right
 import com.coursy.videos.failure.FFmpegFailure
 import com.coursy.videos.model.Metadata
 import com.coursy.videos.model.ProcessingStatus
+import com.coursy.videos.model.VideoQuality
 import com.coursy.videos.processing.SegmentInfo
 import com.coursy.videos.processing.VideoQualityConfig
 import com.coursy.videos.repository.MetadataRepository
+import com.coursy.videos.repository.VideoQualityRepository
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.io.InputStream
@@ -19,6 +22,7 @@ import java.nio.file.Path
 class VideoProcessingService(
     private val minIoService: MinIOService,
     private val metadataRepository: MetadataRepository,
+    private val videoQualityRepository: VideoQualityRepository
 ) {
     private val logger = LoggerFactory.getLogger(VideoProcessingService::class.java)
     private val qualities = listOf(
@@ -54,15 +58,20 @@ class VideoProcessingService(
                 Files.createDirectories(qualityDir)
 
                 // FFmpeg command
-                processQuality(originalFile, qualityDir, quality)
-                    .onLeft {
+                val segmentInfo = processQuality(originalFile, qualityDir, quality)
+                    .getOrElse {
                         logger.error(it.message())
                         return
                     } // todo handle
 
                 uploadHlsSegments(qualityDir, quality.name, metadata.path)
 
-                // Zapisz jakość do DB
+                val qualityToPersist = VideoQuality(
+                    quality,
+                    segmentInfo,
+                    metadata
+                )
+                videoQualityRepository.save(qualityToPersist)
 
                 logger.info("Finished processing quality ${quality.resolution} for video: ${metadata.id}")
             }
@@ -78,8 +87,6 @@ class VideoProcessingService(
                 }
             }
             uploadMasterPlaylist(metadata.path, masterPlaylistContent.toString())
-
-            // Save qualities
 
             metadata.status = ProcessingStatus.COMPLETED
             metadataRepository.save(metadata)
