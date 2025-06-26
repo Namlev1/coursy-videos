@@ -130,7 +130,7 @@ class VideoController(
 //            )
 //    }
 
-    @GetMapping("/{videoId}/stream/master.m3u8")
+    @GetMapping("/{videoId}/stream")
     fun getMasterPlaylist(@PathVariable videoId: UUID): ResponseEntity<String> {
         return videoService
             .getMasterPlaylist(videoId)
@@ -148,7 +148,7 @@ class VideoController(
             )
     }
 
-    @GetMapping("/{videoId}/stream/{quality}/playlist.m3u8")
+    @GetMapping("/{videoId}/{quality}/playlist.m3u8")
     fun getQualityPlaylist(
         @PathVariable videoId: UUID,
         @PathVariable quality: String
@@ -169,13 +169,32 @@ class VideoController(
             )
     }
 
-    @GetMapping("/{videoId}/stream/{quality}/{segmentName}")
+    @GetMapping("/{videoId}/{quality}/{segmentName}")
     fun getSegment(
         @PathVariable videoId: UUID,
         @PathVariable quality: String,
         @PathVariable segmentName: String
     ): ResponseEntity<StreamingResponseBody> {
-        TODO()
+        return videoService
+            .getSegment(videoId, quality, segmentName)
+            .fold(
+                { failure ->
+                    val errorBody = StreamingResponseBody { outputStream ->
+                        outputStream.write(failure.message().toByteArray())
+                    }
+                    ResponseEntity.badRequest()
+                        .contentType(MediaType.TEXT_PLAIN)
+                        .body(errorBody)
+                },
+                { streamingResponseBody ->
+
+                    ResponseEntity.ok()
+                        .header("Accept-Ranges", "bytes")
+                        .contentType(MediaType.parseMediaType("video/mp2t"))
+                        .body(streamingResponseBody)
+                }
+
+            )
     }
 
     @Operation(summary = "Download video file")

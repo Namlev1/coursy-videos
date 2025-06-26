@@ -205,6 +205,28 @@ class VideoService(
             }
     }
 
+    fun getSegment(
+        videoId: UUID,
+        quality: String,
+        segmentName: String,
+    ): Either<Failure, StreamingResponseBody> {
+        val metadata = metadataRepository
+            .findById(videoId)
+            .getOrElse { return MetadataFailure.NotFound.left() }
+        val path = "${metadata.path}/$quality/$segmentName"
+
+        return minioService
+            .getFileStream(path)
+            .map { inputStream ->
+                StreamingResponseBody { outputStream ->
+                    inputStream.use { input ->
+                        input.copyTo(outputStream)
+                    }
+                }
+            }
+
+    }
+
     private fun fileAlreadyExists(
         fileName: FileName,
         userId: Long,
