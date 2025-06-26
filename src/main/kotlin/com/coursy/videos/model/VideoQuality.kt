@@ -1,6 +1,6 @@
 package com.coursy.videos.model
 
-import com.coursy.videos.processing.SegmentInfo
+import com.coursy.videos.processing.SegmentsInfo
 import com.coursy.videos.processing.VideoQualityConfig
 import jakarta.persistence.Entity
 import jakarta.persistence.Id
@@ -35,7 +35,7 @@ class VideoQuality(
 
     constructor(
         config: VideoQualityConfig,
-        segmentInfo: SegmentInfo,
+        segmentsInfo: SegmentsInfo,
         metadata: Metadata
     ) : this(
         id = UUID.randomUUID(),
@@ -43,7 +43,7 @@ class VideoQuality(
         resolution = config.resolution,
         bitrate = config.bitrate,
         playlistPath = "${metadata.path}/${config.name}",
-        segmentCount = segmentInfo.segmentCount,
-        avgSegmentDuration = segmentInfo.avgDuration
+        segmentCount = segmentsInfo.segmentsCount,
+        avgSegmentDuration = segmentsInfo.avgDuration
     )
 } 

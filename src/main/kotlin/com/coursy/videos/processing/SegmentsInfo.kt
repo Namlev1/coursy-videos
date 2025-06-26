@@ -1,6 +1,6 @@
 package com.coursy.videos.processing
 
-data class SegmentInfo(
-    val segmentCount: Int,
+data class SegmentsInfo(
+    val segmentsCount: Int,
     val avgDuration: Double
 )

@@ -7,7 +7,7 @@ import arrow.core.right
 import com.coursy.videos.failure.FFmpegFailure
 import com.coursy.videos.failure.Failure
 import com.coursy.videos.model.*
-import com.coursy.videos.processing.SegmentInfo
+import com.coursy.videos.processing.SegmentsInfo
 import com.coursy.videos.processing.VideoQualityConfig
 import com.coursy.videos.repository.MetadataRepository
 import com.coursy.videos.repository.ThumbnailRepository
@@ -32,96 +32,149 @@ class VideoProcessingService(
         VideoQualityConfig("1080p", "1920x1080", 2800000)
     )
 
-    // todo finish this method
     suspend fun processVideoAsync(metadata: Metadata, videoStream: InputStream) {
-        logger.info("Started async processing")
+        val videoId = metadata.id
+        logger.info("Started processing video $videoId")
 
-        val tempDir = Files.createTempDirectory("video_processing_${metadata.id}")
+        val tempDir = Files.createTempDirectory("video_processing_$videoId")
+        logger.debug("Created temp directory: {} for video {}", tempDir, videoId)
+
+        setStatus(metadata, ProcessingStatus.PROCESSING)
+
         runCatching {
-            // Update status
-            metadata.status = ProcessingStatus.PROCESSING
-            metadataRepository.save(metadata)
+            val originalVideo = downloadVideoFromMinio(tempDir, videoStream)
+            logger.debug("Downloaded {} bytes for video {}", Files.size(originalVideo), videoId)
 
-            // Download z MinIO do temp
-            val originalFile = tempDir.resolve("original.mp4")
-            videoStream.use { stream ->
-                Files.copy(stream, originalFile)
-            }
-
-            val hlsDir = tempDir.resolve("hls")
-            Files.createDirectories(hlsDir)
-
-            // todo parallel after you're done with entire method
-            for (quality in qualities) {
-                logger.info("Started processing quality ${quality.resolution} for video: ${metadata.id}")
-
-                val qualityDir = hlsDir.resolve(quality.name)
-                Files.createDirectories(qualityDir)
-
-                // FFmpeg command
-                val segmentInfo = processQuality(originalFile, qualityDir, quality)
-                    .getOrElse {
-                        logger.error(it.message())
-                        return
-                    } // todo handle
-
-                uploadHlsSegments(qualityDir, quality.name, metadata.path)
-
-                val qualityToPersist = VideoQuality(
-                    quality,
-                    segmentInfo,
-                    metadata
-                )
-                videoQualityRepository.save(qualityToPersist)
-
-                logger.info("Finished processing quality ${quality.resolution} for video: ${metadata.id}")
-            }
-
-            val masterPlaylistContent = StringBuilder().apply {
-                appendLine("#EXTM3U")
-                appendLine("#EXT-X-VERSION:3")
-                appendLine("#EXT-X-INDEPENDENT-SEGMENTS")
-
-                // Add each quality
-                qualities.forEach { quality ->
-                    appendLine("#EXT-X-STREAM-INF:BANDWIDTH=${quality.bitrate},RESOLUTION=${quality.resolution}")
-                    appendLine("${quality.name}/playlist.m3u8")
-                }
-            }
-            uploadMasterPlaylist(metadata.path, masterPlaylistContent.toString())
-
-            val duration = getVideoDuration(originalFile).getOrElse {
-                logger.error(it.message())
+            val duration = getVideoDuration(originalVideo).getOrElse {
+                logger.error("Failed to get video duration for video $videoId: ${it.message()}")
                 return //todo handle
             }
+            logger.debug("Video duration detected: {}s for video {}", duration, videoId)
             metadata.duration = duration
 
-            val thumbnails = generateThumbnails(originalFile, tempDir, metadata)
+            logger.debug("Creating temporary directories for video {}", videoId)
+            val (hlsDir, thumbnailsDir) = createTempDirs(tempDir)
+
+            processQualities(hlsDir, originalVideo, metadata)
+            processMasterPlaylist(metadata)
+
+            val thumbnails = generateThumbnails(originalVideo, thumbnailsDir, metadata)
                 .getOrElse {
-                    logger.error(it.message())
+                    logger.error("Failed to generate thumbnails for video $videoId: ${it.message()}")
+                    setStatus(metadata, ProcessingStatus.FAILED)
                     return // todo handle
                 }
             thumbnailRepository.saveAll(thumbnails)
+            logger.info("Generated {} thumbnails for video {}", thumbnails.size, videoId)
 
-            metadata.status = ProcessingStatus.COMPLETED
-            metadataRepository.save(metadata)
         }
             .fold(
                 onSuccess = {
-                    logger.info("Video processing completed successfully for ${metadata.id}")
-
-                    metadata.status = ProcessingStatus.COMPLETED
-                    metadataRepository.save(metadata)
+                    logger.info("Video processing completed successfully for video {}", videoId)
+                    setStatus(metadata, ProcessingStatus.COMPLETED)
                 },
                 onFailure = { error ->
-                    logger.error("Failed to process video ${metadata.id}", error)
-                    metadata.status = ProcessingStatus.FAILED
-                    metadataRepository.save(metadata)
+                    logger.error("Failed to process video {}", videoId, error)
+                    setStatus(metadata, ProcessingStatus.FAILED)
                 }
             )
 
-        tempDir.toFile().deleteRecursively()
-        logger.info("Finished async processing")
+        runCatching {
+            tempDir.toFile().deleteRecursively()
+            logger.debug("Cleaned up temp directory for video {}", videoId)
+        }.onFailure { exception ->
+            logger.warn("Temporary directory cleanup failed for video {}: {}", videoId, exception.message)
+        }
+
+        logger.info("Finished processing video {}", videoId)
+    }
+
+    private fun processMasterPlaylist(metadata: Metadata) {
+        val videoId = metadata.id
+        logger.debug("Creating master playlist for video {}", videoId)
+
+        val masterPlaylistContent = StringBuilder().apply {
+            appendLine("#EXTM3U")
+            appendLine("#EXT-X-VERSION:3")
+            appendLine("#EXT-X-INDEPENDENT-SEGMENTS")
+
+            qualities.forEach { quality ->
+                appendLine("#EXT-X-STREAM-INF:BANDWIDTH=${quality.bitrate},RESOLUTION=${quality.resolution}")
+                appendLine("${quality.name}/playlist.m3u8")
+            }
+        }
+
+        logger.debug("Master playlist content for video {}: {}", videoId, masterPlaylistContent.toString())
+        uploadMasterPlaylist(metadata.path, masterPlaylistContent.toString())
+        logger.debug("Uploaded master playlist for video {}", videoId)
+    }
+
+    // todo parallel after you're done with entire method
+    private fun processQualities(
+        hlsDir: Path,
+        originalVideo: Path,
+        metadata: Metadata
+    ) {
+        val videoId = metadata.id
+        logger.info(
+            "Starting quality processing for video {} (qualities: {})",
+            videoId,
+            qualities.map { it.resolution })
+
+        for (quality in qualities) {
+            logger.info("Started processing quality {} for video {}", quality.resolution, videoId)
+
+            val qualityDir = hlsDir.resolve(quality.name)
+            Files.createDirectories(qualityDir)
+            logger.debug("Created quality directory: {} for video {}", qualityDir, videoId)
+
+            // FFmpeg command
+            val segmentsInfo = processQuality(originalVideo, qualityDir, quality)
+                .getOrElse {
+                    logger.error(
+                        "FFmpeg processing failed for video {} quality {}: {}",
+                        videoId,
+                        quality.resolution,
+                        it.message()
+                    )
+                    return
+                } // todo handle
+
+            logger.debug(
+                "Generated {} HLS segments for video {} quality {}",
+                segmentsInfo.segmentsCount,
+                videoId,
+                quality.resolution
+            )
+            uploadHlsFiles(qualityDir, quality.name, metadata.path)
+
+            val qualityToPersist = VideoQuality(
+                quality,
+                segmentsInfo,
+                metadata
+            )
+            videoQualityRepository.save(qualityToPersist)
+
+            logger.info("Completed quality {} for video {}", quality.resolution, videoId)
+        }
+        logger.info("Finished processing all qualities for video {}", videoId)
+    }
+
+    private fun createTempDirs(tempDir: Path): Pair<Path, Path> {
+        val hlsDir = tempDir.resolve("hls")
+        Files.createDirectories(hlsDir)
+        val thumbnailsDir = tempDir.resolve("thumbnails")
+        Files.createDirectories(hlsDir)
+        logger.debug("Created HLS directory: {} and thumbnails directory: {}", hlsDir, thumbnailsDir)
+        return Pair(hlsDir, thumbnailsDir)
+    }
+
+    private fun downloadVideoFromMinio(tempDir: Path, videoStream: InputStream): Path {
+        val originalFile = tempDir.resolve("original.mp4")
+        videoStream.use { stream ->
+            Files.copy(stream, originalFile)
+        }
+        return originalFile
     }
 
     private fun getVideoDuration(inputFile: Path): Either<FFmpegFailure, Double> {
@@ -132,12 +185,14 @@ class VideoProcessingService(
             "-of", "csv=p=0",
             inputFile.toString()
         )
+        logger.debug("Executing ffprobe command: {}", command.joinToString(" "))
 
         val process = ProcessBuilder(command).start()
         val output = process.inputStream.bufferedReader().readText().trim()
         val exitCode = process.waitFor()
 
         if (exitCode != 0) {
+            logger.error("FFprobe failed with exit code {} for file {}", exitCode, inputFile)
             return FFmpegFailure.ProcessingError(exitCode).left()
         }
 
@@ -149,7 +204,7 @@ class VideoProcessingService(
         inputFile: Path,
         outputDir: Path,
         quality: VideoQualityConfig
-    ): Either<FFmpegFailure, SegmentInfo> {
+    ): Either<FFmpegFailure, SegmentsInfo> {
         val command = listOf(
             "ffmpeg",
             "-i", inputFile.toString(),
@@ -159,16 +214,18 @@ class VideoProcessingService(
             "-b:v", "${quality.bitrate}",
             "-maxrate", "${(quality.bitrate * 1.2).toInt()}",
             "-bufsize", "${quality.bitrate * 2}",
-            "-hls_time", "6",                    // 6-sekundowe segmenty
+            "-hls_time", "6",                    // 6-seconds segments
             "-hls_playlist_type", "vod",
             "-hls_segment_filename", outputDir.resolve("segment_%03d.ts").toString(),
             outputDir.resolve("playlist.m3u8").toString()
         )
-
+        logger.debug("Executing FFmpeg command for video quality {}: {}", quality.resolution, command.joinToString(" "))
+        
         val process = ProcessBuilder(command).start()
         val exitCode = process.waitFor()
 
         if (exitCode != 0) {
+            logger.error("FFmpeg failed with exit code {} for quality {}", exitCode, quality.resolution)
             return FFmpegFailure.ProcessingError(exitCode).left()
         }
 
@@ -177,10 +234,10 @@ class VideoProcessingService(
             .filter { it.toString().endsWith(".ts") }
             .count()
 
-        return SegmentInfo(segmentFiles.toInt(), 6.0).right()
+        return SegmentsInfo(segmentFiles.toInt(), 6.0).right()
     }
 
-    private fun uploadHlsSegments(hlsDir: Path, qualityName: String, pathPrefix: String) {
+    private fun uploadHlsFiles(hlsDir: Path, qualityName: String, pathPrefix: String) {
         Files.walk(hlsDir).forEach { file ->
             if (Files.isRegularFile(file)) {
                 val fileName = file.fileName.toString()
@@ -219,27 +276,26 @@ class VideoProcessingService(
             else -> "application/octet-stream"
         }
     }
+
     private fun generateThumbnails(
         inputFile: Path,
         outputDir: Path,
         metadata: Metadata
     ): Either<Failure, List<Thumbnail>> {
-        val videoDurationSeconds = metadata.duration
-        val thumbnailsDir = outputDir.resolve("thumbnails")
-        Files.createDirectories(thumbnailsDir)
+        val videoDuration = metadata.duration
 
         val thumbnails = mutableListOf<Thumbnail>()
 
         // Generate thumbnails at different timestamps (10%, 25%, 50% of video)
         val timestamps = listOf(
-            videoDurationSeconds * 0.1,
-            videoDurationSeconds * 0.25,
-            videoDurationSeconds * 0.5
+            videoDuration * 0.1,
+            videoDuration * 0.25,
+            videoDuration * 0.5
         )
 
         for (timestamp in timestamps) {
             for (size in ThumbnailType.entries) {
-                val outputFile = thumbnailsDir.resolve("${timestamp.toInt()}_${size.name.lowercase()}.jpg")
+                val outputFile = outputDir.resolve("${timestamp.toInt()}_${size.name.lowercase()}.jpg")
 
                 val command = listOf(
                     "ffmpeg",
@@ -285,5 +341,10 @@ class VideoProcessingService(
         }
 
         return thumbnails.right()
+    }
+
+    private fun setStatus(metadata: Metadata, status: ProcessingStatus) {
+        metadata.status = status
+        metadataRepository.save(metadata)
     }
 }
