@@ -190,6 +190,21 @@ class VideoService(
             }
     }
 
+    fun getQualityPlaylist(videoId: UUID, quality: String): Either<Failure, String> {
+        val metadata = metadataRepository
+            .findById(videoId)
+            .getOrElse { return MetadataFailure.NotFound.left() }
+        val path = "${metadata.path}/$quality/playlist.m3u8"
+
+        return minioService
+            .getFileStream(path)
+            .map { inputStream ->
+                inputStream.use { stream ->
+                    stream.bufferedReader(Charsets.UTF_8).readText()
+                }
+            }
+    }
+
     private fun fileAlreadyExists(
         fileName: FileName,
         userId: Long,
