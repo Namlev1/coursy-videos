@@ -89,6 +89,12 @@ class VideoProcessingService(
             }
             uploadMasterPlaylist(metadata.path, masterPlaylistContent.toString())
 
+            val duration = getVideoDuration(originalFile).getOrElse {
+                logger.error(it.message())
+                return //todo handle
+            }
+            metadata.duration = duration
+
             metadata.status = ProcessingStatus.COMPLETED
             metadataRepository.save(metadata)
         }
@@ -108,6 +114,27 @@ class VideoProcessingService(
 
         tempDir.toFile().deleteRecursively()
         logger.info("Finished async processing")
+    }
+
+    private fun getVideoDuration(inputFile: Path): Either<FFmpegFailure, Double> {
+        val command = listOf(
+            "ffprobe",
+            "-v", "quiet",
+            "-show_entries", "format=duration",
+            "-of", "csv=p=0",
+            inputFile.toString()
+        )
+
+        val process = ProcessBuilder(command).start()
+        val output = process.inputStream.bufferedReader().readText().trim()
+        val exitCode = process.waitFor()
+
+        if (exitCode != 0) {
+            return FFmpegFailure.ProcessingError(exitCode).left()
+        }
+
+        return output.toDoubleOrNull()?.right()
+            ?: FFmpegFailure.DurationParsingError.left()
     }
 
     private fun processQuality(
@@ -134,7 +161,7 @@ class VideoProcessingService(
         val exitCode = process.waitFor()
 
         if (exitCode != 0) {
-            return FFmpegFailure(exitCode).left()
+            return FFmpegFailure.ProcessingError(exitCode).left()
         }
 
         // Count segments

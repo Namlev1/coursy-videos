@@ -1,7 +1,12 @@
 package com.coursy.videos.failure
 
-class FFmpegFailure(
-    val exitCode: Int
+sealed class FFmpegFailure(
 ) : Failure {
-    override fun message() = "FFmpeg failed with exit code $exitCode"
+    object DurationParsingError : FFmpegFailure()
+    data class ProcessingError(val exitCode: Int) : FFmpegFailure()
+
+    override fun message(): String = when (this) {
+        is DurationParsingError -> "Could not parse duration"
+        is ProcessingError -> "FFmpeg failed with exit code $exitCode"
+    }
 }

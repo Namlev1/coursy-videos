@@ -60,19 +60,19 @@ data class MetadataResponse(
     val uploadedAt: LocalDateTime,
 
     @Schema(
-        description = "Duration of the video in seconds",
-        example = "300",
+        description = "Duration of the video",
+        example = "300.56",
     )
-    val duration: Int = 0,
+    val duration: Double = 0.0
 )
 
 fun Metadata.toResponse() = MetadataResponse(
-    id = this.id ?: UUID.randomUUID(),
+    id = this.id,
     title = this.title,
     path = this.path,
     course = this.course,
     userId = this.userId,
     fileSize = this.fileSize,
     uploadedAt = this.uploadedAt,
-    duration = this.duration ?: 0
+    duration = this.duration
 )

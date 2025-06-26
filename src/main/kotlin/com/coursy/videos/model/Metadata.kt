@@ -34,9 +34,8 @@ class Metadata(
     @Column(nullable = false)
     var status: ProcessingStatus,
 
-    // TODO implement duration with FFmpeg
     @Column
-    val duration: Int? = null, // in seconds
+    var duration: Double = 0.0,
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
