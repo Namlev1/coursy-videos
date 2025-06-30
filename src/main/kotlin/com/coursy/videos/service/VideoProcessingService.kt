@@ -4,10 +4,8 @@ import arrow.core.Either
 import arrow.core.getOrElse
 import arrow.core.left
 import arrow.core.right
-import com.coursy.videos.failure.FFmpegFailure
 import com.coursy.videos.failure.Failure
 import com.coursy.videos.model.*
-import com.coursy.videos.processing.SegmentsInfo
 import com.coursy.videos.processing.VideoQualityConfig
 import com.coursy.videos.repository.MetadataRepository
 import com.coursy.videos.repository.ThumbnailRepository
@@ -18,9 +16,11 @@ import java.io.InputStream
 import java.nio.file.Files
 import java.nio.file.Path
 
+// TODO extract HlsService, FFmpegService, FileManagementService
 @Service
 class VideoProcessingService(
     private val minIoService: MinIOService,
+    private val fFmpegService: FFmpegService,
     private val metadataRepository: MetadataRepository,
     private val videoQualityRepository: VideoQualityRepository,
     private val thumbnailRepository: ThumbnailRepository
@@ -45,7 +45,7 @@ class VideoProcessingService(
             val originalVideo = downloadVideoFromMinio(tempDir, videoStream)
             logger.debug("Downloaded {} bytes for video {}", Files.size(originalVideo), videoId)
 
-            val duration = getVideoDuration(originalVideo).getOrElse {
+            val duration = fFmpegService.getVideoDuration(originalVideo).getOrElse {
                 logger.error("Failed to get video duration for video $videoId: ${it.message()}")
                 return //todo handle
             }
@@ -129,7 +129,7 @@ class VideoProcessingService(
             logger.debug("Created quality directory: {} for video {}", qualityDir, videoId)
 
             // FFmpeg command
-            val segmentsInfo = processQuality(originalVideo, qualityDir, quality)
+            val segmentsInfo = fFmpegService.processQuality(originalVideo, qualityDir, quality)
                 .getOrElse {
                     logger.error(
                         "FFmpeg processing failed for video {} quality {}: {}",
@@ -175,66 +175,6 @@ class VideoProcessingService(
             Files.copy(stream, originalFile)
         }
         return originalFile
-    }
-
-    private fun getVideoDuration(inputFile: Path): Either<FFmpegFailure, Double> {
-        val command = listOf(
-            "ffprobe",
-            "-v", "quiet",
-            "-show_entries", "format=duration",
-            "-of", "csv=p=0",
-            inputFile.toString()
-        )
-        logger.debug("Executing ffprobe command: {}", command.joinToString(" "))
-
-        val process = ProcessBuilder(command).start()
-        val output = process.inputStream.bufferedReader().readText().trim()
-        val exitCode = process.waitFor()
-
-        if (exitCode != 0) {
-            logger.error("FFprobe failed with exit code {} for file {}", exitCode, inputFile)
-            return FFmpegFailure.ProcessingError(exitCode).left()
-        }
-
-        return output.toDoubleOrNull()?.right()
-            ?: FFmpegFailure.DurationParsingError.left()
-    }
-
-    private fun processQuality(
-        inputFile: Path,
-        outputDir: Path,
-        quality: VideoQualityConfig
-    ): Either<FFmpegFailure, SegmentsInfo> {
-        val command = listOf(
-            "ffmpeg",
-            "-i", inputFile.toString(),
-            "-c:v", "libx264",
-            "-c:a", "aac",
-            "-s", quality.resolution,
-            "-b:v", "${quality.bitrate}",
-            "-maxrate", "${(quality.bitrate * 1.2).toInt()}",
-            "-bufsize", "${quality.bitrate * 2}",
-            "-hls_time", "6",                    // 6-seconds segments
-            "-hls_playlist_type", "vod",
-            "-hls_segment_filename", outputDir.resolve("segment_%03d.ts").toString(),
-            outputDir.resolve("playlist.m3u8").toString()
-        )
-        logger.debug("Executing FFmpeg command for video quality {}: {}", quality.resolution, command.joinToString(" "))
-        
-        val process = ProcessBuilder(command).start()
-        val exitCode = process.waitFor()
-
-        if (exitCode != 0) {
-            logger.error("FFmpeg failed with exit code {} for quality {}", exitCode, quality.resolution)
-            return FFmpegFailure.ProcessingError(exitCode).left()
-        }
-
-        // Count segments
-        val segmentFiles = Files.walk(outputDir)
-            .filter { it.toString().endsWith(".ts") }
-            .count()
-
-        return SegmentsInfo(segmentFiles.toInt(), 6.0).right()
     }
 
     private fun uploadHlsFiles(hlsDir: Path, qualityName: String, pathPrefix: String) {
@@ -297,23 +237,9 @@ class VideoProcessingService(
             for (size in ThumbnailType.entries) {
                 val outputFile = outputDir.resolve("${timestamp.toInt()}_${size.name.lowercase()}.jpg")
 
-                val command = listOf(
-                    "ffmpeg",
-                    "-i", inputFile.toString(),
-                    "-ss", timestamp.toString(),                    // Seek to timestamp
-                    "-vframes", "1",                               // Extract 1 frame
-                    "-vf", "scale=${size.width}:${size.height}",   // Resize
-                    "-q:v", "2",                                   // High quality (1-31, lower = better)
-                    "-y",                                          // Overwrite output files
-                    outputFile.toString()
-                )
-
-                val process = ProcessBuilder(command).start()
-                val exitCode = process.waitFor()
-
-                if (exitCode != 0) {
-                    return FFmpegFailure.ProcessingError(exitCode).left()
-                }
+                fFmpegService
+                    .generateThumbnail(inputFile, outputFile, timestamp, size.width, size.height)
+                    .onLeft { return it.left() }
 
                 val objectPath = "${metadata.path}/thumbnails/${timestamp.toInt()}_${size.name.lowercase()}.jpg"
 
