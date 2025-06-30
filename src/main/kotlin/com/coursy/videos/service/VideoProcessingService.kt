@@ -16,11 +16,11 @@ import java.io.InputStream
 import java.nio.file.Files
 import java.nio.file.Path
 
-// TODO extract HlsService, FFmpegService, FileManagementService
+// TODO extract HlsService
 @Service
 class VideoProcessingService(
-    private val minIoService: MinIOService,
     private val fFmpegService: FFmpegService,
+    private val fileManagementService: FileManagementService,
     private val metadataRepository: MetadataRepository,
     private val videoQualityRepository: VideoQualityRepository,
     private val thumbnailRepository: ThumbnailRepository
@@ -36,13 +36,12 @@ class VideoProcessingService(
         val videoId = metadata.id
         logger.info("Started processing video $videoId")
 
-        val tempDir = Files.createTempDirectory("video_processing_$videoId")
-        logger.debug("Created temp directory: {} for video {}", tempDir, videoId)
+        val tempDir = fileManagementService.createTempDir(videoId)
 
         setStatus(metadata, ProcessingStatus.PROCESSING)
 
         runCatching {
-            val originalVideo = downloadVideoFromMinio(tempDir, videoStream)
+            val originalVideo = fileManagementService.downloadVideoFromMinio(tempDir, videoStream)
             logger.debug("Downloaded {} bytes for video {}", Files.size(originalVideo), videoId)
 
             val duration = fFmpegService.getVideoDuration(originalVideo).getOrElse {
@@ -53,7 +52,7 @@ class VideoProcessingService(
             metadata.duration = duration
 
             logger.debug("Creating temporary directories for video {}", videoId)
-            val (hlsDir, thumbnailsDir) = createTempDirs(tempDir)
+            val (hlsDir, thumbnailsDir) = fileManagementService.createTempDirs(tempDir)
 
             processQualities(hlsDir, originalVideo, metadata)
             processMasterPlaylist(metadata)
@@ -79,12 +78,7 @@ class VideoProcessingService(
                 }
             )
 
-        runCatching {
-            tempDir.toFile().deleteRecursively()
-            logger.debug("Cleaned up temp directory for video {}", videoId)
-        }.onFailure { exception ->
-            logger.warn("Temporary directory cleanup failed for video {}: {}", videoId, exception.message)
-        }
+        fileManagementService.cleanupDirectory(tempDir, videoId)
 
         logger.info("Finished processing video {}", videoId)
     }
@@ -105,7 +99,7 @@ class VideoProcessingService(
         }
 
         logger.debug("Master playlist content for video {}: {}", videoId, masterPlaylistContent.toString())
-        uploadMasterPlaylist(metadata.path, masterPlaylistContent.toString())
+        fileManagementService.uploadMasterPlaylist(metadata.path, masterPlaylistContent.toString())
         logger.debug("Uploaded master playlist for video {}", videoId)
     }
 
@@ -146,7 +140,7 @@ class VideoProcessingService(
                 videoId,
                 quality.resolution
             )
-            uploadHlsFiles(qualityDir, quality.name, metadata.path)
+            fileManagementService.uploadHlsFiles(qualityDir, quality.name, metadata.path)
 
             val qualityToPersist = VideoQuality(
                 quality,
@@ -158,63 +152,6 @@ class VideoProcessingService(
             logger.info("Completed quality {} for video {}", quality.resolution, videoId)
         }
         logger.info("Finished processing all qualities for video {}", videoId)
-    }
-
-    private fun createTempDirs(tempDir: Path): Pair<Path, Path> {
-        val hlsDir = tempDir.resolve("hls")
-        Files.createDirectories(hlsDir)
-        val thumbnailsDir = tempDir.resolve("thumbnails")
-        Files.createDirectories(hlsDir)
-        logger.debug("Created HLS directory: {} and thumbnails directory: {}", hlsDir, thumbnailsDir)
-        return Pair(hlsDir, thumbnailsDir)
-    }
-
-    private fun downloadVideoFromMinio(tempDir: Path, videoStream: InputStream): Path {
-        val originalFile = tempDir.resolve("original.mp4")
-        videoStream.use { stream ->
-            Files.copy(stream, originalFile)
-        }
-        return originalFile
-    }
-
-    private fun uploadHlsFiles(hlsDir: Path, qualityName: String, pathPrefix: String) {
-        Files.walk(hlsDir).forEach { file ->
-            if (Files.isRegularFile(file)) {
-                val fileName = file.fileName.toString()
-                val objectPath = "$pathPrefix/$qualityName/$fileName"
-                val inputStream = Files.newInputStream(file)
-
-                minIoService
-                    .uploadFile(
-                        objectPath,
-                        inputStream,
-                        getContentType(fileName),
-                        Files.size(file)
-                    )
-                    .onLeft { logger.error(it.message()) }
-            }
-        }
-    }
-
-    private fun uploadMasterPlaylist(path: String, content: String) {
-        val contentBytes = content.toByteArray()
-
-        minIoService
-            .uploadFile(
-                "$path/master.m3u8",
-                contentBytes.inputStream(),
-                "application/vnd.apple.mpegurl",
-                contentBytes.size.toLong()
-            )
-            .onLeft { logger.error(it.message()) }
-    }
-
-    private fun getContentType(fileName: String): String {
-        return when {
-            fileName.endsWith(".ts") -> "video/mp2t"
-            fileName.endsWith(".m3u8") -> "application/vnd.apple.mpegurl"
-            else -> "application/octet-stream"
-        }
     }
 
     private fun generateThumbnails(
@@ -243,17 +180,7 @@ class VideoProcessingService(
 
                 val objectPath = "${metadata.path}/thumbnails/${timestamp.toInt()}_${size.name.lowercase()}.jpg"
 
-                Files.newInputStream(outputFile).use { inputStream ->
-                    minIoService.uploadFile(
-                        objectPath,
-                        inputStream,
-                        "image/jpeg",
-                        Files.size(outputFile)
-                    ).onLeft {
-                        logger.error("Failed to upload thumbnail: ${it.message()}")
-                        return it.left()
-                    }
-                }
+                fileManagementService.uploadThumbnail(outputFile, objectPath)
 
                 thumbnails.add(
                     Thumbnail(
