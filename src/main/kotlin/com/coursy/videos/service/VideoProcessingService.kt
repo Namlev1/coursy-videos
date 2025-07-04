@@ -1,27 +1,21 @@
 package com.coursy.videos.service
 
-import arrow.core.Either
 import arrow.core.getOrElse
-import arrow.core.left
-import arrow.core.right
-import com.coursy.videos.failure.Failure
 import com.coursy.videos.model.Metadata
 import com.coursy.videos.model.ProcessingStatus
-import com.coursy.videos.model.Thumbnail
-import com.coursy.videos.model.ThumbnailType
 import com.coursy.videos.repository.MetadataRepository
 import com.coursy.videos.repository.ThumbnailRepository
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.io.InputStream
 import java.nio.file.Files
-import java.nio.file.Path
 
 @Service
 class VideoProcessingService(
     private val fFmpegService: FFmpegService,
     private val fileManagementService: FileManagementService,
     private val hlsService: HlsService,
+    private val thumbnailsService: ThumbnailsService,
     private val metadataRepository: MetadataRepository,
     private val thumbnailRepository: ThumbnailRepository
 ) {
@@ -52,7 +46,7 @@ class VideoProcessingService(
             // Use HlsService instead of processing qualities and master playlist directly
             hlsService.processHls(hlsDir, originalVideo, metadata)
 
-            val thumbnails = generateThumbnails(originalVideo, thumbnailsDir, metadata)
+            val thumbnails = thumbnailsService.generateThumbnails(originalVideo, thumbnailsDir, metadata)
                 .getOrElse {
                     logger.error("Failed to generate thumbnails for video $videoId: ${it.message()}")
                     setStatus(metadata, ProcessingStatus.FAILED)
@@ -76,48 +70,6 @@ class VideoProcessingService(
         fileManagementService.cleanupDirectory(tempDir, videoId)
 
         logger.info("Finished processing video {}", videoId)
-    }
-
-    private fun generateThumbnails(
-        inputFile: Path,
-        outputDir: Path,
-        metadata: Metadata
-    ): Either<Failure, List<Thumbnail>> {
-        val videoDuration = metadata.duration
-
-        val thumbnails = mutableListOf<Thumbnail>()
-
-        // Generate thumbnails at different timestamps (10%, 25%, 50% of video)
-        val timestamps = listOf(
-            videoDuration * 0.1,
-            videoDuration * 0.25,
-            videoDuration * 0.5
-        )
-
-        for (timestamp in timestamps) {
-            for (size in ThumbnailType.entries) {
-                val outputFile = outputDir.resolve("${timestamp.toInt()}_${size.name.lowercase()}.jpg")
-
-                fFmpegService
-                    .generateThumbnail(inputFile, outputFile, timestamp, size.width, size.height)
-                    .onLeft { return it.left() }
-
-                val objectPath = "${metadata.path}/thumbnails/${timestamp.toInt()}_${size.name.lowercase()}.jpg"
-
-                fileManagementService.uploadThumbnail(outputFile, objectPath)
-
-                thumbnails.add(
-                    Thumbnail(
-                        metadata = metadata,
-                        path = outputFile.toString(),
-                        timestampSeconds = timestamp,
-                        thumbnailType = size,
-                    )
-                )
-            }
-        }
-
-        return thumbnails.right()
     }
 
     private fun setStatus(metadata: Metadata, status: ProcessingStatus) {
