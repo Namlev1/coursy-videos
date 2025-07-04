@@ -1,14 +1,12 @@
 package com.coursy.videos.service
 
 import arrow.core.getOrElse
-
 import com.coursy.videos.model.Metadata
 import com.coursy.videos.model.VideoQuality
 import com.coursy.videos.processing.VideoQualityConfig
 import com.coursy.videos.repository.VideoQualityRepository
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
-import java.nio.file.Files
 import java.nio.file.Path
 
 @Service
@@ -30,6 +28,54 @@ class HlsService(
         processMasterPlaylist(metadata)
     }
 
+    // todo parallel after you're done with entire method
+    private fun processQualities(
+        hlsDir: Path,
+        originalVideo: Path,
+        metadata: Metadata
+    ) {
+        val videoId = metadata.id
+        logger.info(
+            "Starting quality processing for video {} (qualities: {})",
+            videoId,
+            qualities.map { it.resolution })
+
+        for (quality in qualities) {
+            logger.info("Started processing quality {} for video {}", quality.resolution, videoId)
+
+            val qualityDir = fileManagementService.createQualityDir(hlsDir, quality, videoId)
+
+            val segmentsInfo = fFmpegService.processQuality(originalVideo, qualityDir, quality)
+                .getOrElse {
+                    logger.error(
+                        "FFmpeg processing failed for video {} quality {}: {}",
+                        videoId,
+                        quality.resolution,
+                        it.message()
+                    )
+                    return // todo handle
+                } 
+
+            logger.debug(
+                "Generated {} HLS segments for video {} quality {}",
+                segmentsInfo.segmentsCount,
+                videoId,
+                quality.resolution
+            )
+            fileManagementService.uploadHlsQualityDir(qualityDir, quality.name, metadata.path)
+
+            val qualityToPersist = VideoQuality(
+                quality,
+                segmentsInfo,
+                metadata
+            )
+            videoQualityRepository.save(qualityToPersist)
+
+            logger.info("Completed quality {} for video {}", quality.resolution, videoId)
+        }
+        logger.info("Finished processing all qualities for video {}", videoId)
+    }
+
     private fun processMasterPlaylist(metadata: Metadata) {
         val videoId = metadata.id
         logger.debug("Creating master playlist for video {}", videoId)
@@ -48,56 +94,5 @@ class HlsService(
         logger.debug("Master playlist content for video {}: {}", videoId, masterPlaylistContent.toString())
         fileManagementService.uploadMasterPlaylist(metadata.path, masterPlaylistContent.toString())
         logger.debug("Uploaded master playlist for video {}", videoId)
-    }
-
-    // todo parallel after you're done with entire method
-    private fun processQualities(
-        hlsDir: Path,
-        originalVideo: Path,
-        metadata: Metadata
-    ) {
-        val videoId = metadata.id
-        logger.info(
-            "Starting quality processing for video {} (qualities: {})",
-            videoId,
-            qualities.map { it.resolution })
-
-        for (quality in qualities) {
-            logger.info("Started processing quality {} for video {}", quality.resolution, videoId)
-
-            val qualityDir = hlsDir.resolve(quality.name)
-            Files.createDirectories(qualityDir)
-            logger.debug("Created quality directory: {} for video {}", qualityDir, videoId)
-
-            // FFmpeg command
-            val segmentsInfo = fFmpegService.processQuality(originalVideo, qualityDir, quality)
-                .getOrElse {
-                    logger.error(
-                        "FFmpeg processing failed for video {} quality {}: {}",
-                        videoId,
-                        quality.resolution,
-                        it.message()
-                    )
-                    return
-                } // todo handle
-
-            logger.debug(
-                "Generated {} HLS segments for video {} quality {}",
-                segmentsInfo.segmentsCount,
-                videoId,
-                quality.resolution
-            )
-            fileManagementService.uploadHlsFiles(qualityDir, quality.name, metadata.path)
-
-            val qualityToPersist = VideoQuality(
-                quality,
-                segmentsInfo,
-                metadata
-            )
-            videoQualityRepository.save(qualityToPersist)
-
-            logger.info("Completed quality {} for video {}", quality.resolution, videoId)
-        }
-        logger.info("Finished processing all qualities for video {}", videoId)
     }
 }

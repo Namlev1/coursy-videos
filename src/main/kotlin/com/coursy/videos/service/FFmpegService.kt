@@ -86,9 +86,9 @@ class FFmpegService {
         val command = listOf(
             "ffmpeg",
             "-i", inputFile.toString(),
-            "-ss", timestamp.toString(),                    // Seek to timestamp
+            "-ss", timestamp.toString(),                   // Seek to timestamp
             "-vframes", "1",                               // Extract 1 frame
-            "-vf", "scale=$width:$height",   // Resize
+            "-vf", "scale=$width:$height",                 // Resize
             "-q:v", "2",                                   // High quality (1-31, lower = better)
             "-y",                                          // Overwrite output files
             outputFile.toString()

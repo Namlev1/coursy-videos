@@ -47,7 +47,7 @@ class VideoProcessingService(
             metadata.duration = duration
 
             logger.debug("Creating temporary directories for video {}", videoId)
-            val (hlsDir, thumbnailsDir) = fileManagementService.createTempDirs(tempDir)
+            val (hlsDir, thumbnailsDir) = fileManagementService.createHlsAndThumbnailDirs(tempDir)
 
             // Use HlsService instead of processing qualities and master playlist directly
             hlsService.processHls(hlsDir, originalVideo, metadata)

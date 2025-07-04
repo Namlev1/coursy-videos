@@ -4,6 +4,7 @@ import arrow.core.Either
 import arrow.core.left
 import arrow.core.right
 import com.coursy.videos.failure.Failure
+import com.coursy.videos.processing.VideoQualityConfig
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.io.InputStream
@@ -23,13 +24,24 @@ class FileManagementService(
         return tempDir
     }
 
-    fun createTempDirs(tempDir: Path): Pair<Path, Path> {
+    fun createHlsAndThumbnailDirs(tempDir: Path): Pair<Path, Path> {
         val hlsDir = tempDir.resolve("hls")
         Files.createDirectories(hlsDir)
         val thumbnailsDir = tempDir.resolve("thumbnails")
         Files.createDirectories(thumbnailsDir)
         logger.debug("Created HLS directory: {} and thumbnails directory: {}", hlsDir, thumbnailsDir)
         return Pair(hlsDir, thumbnailsDir)
+    }
+
+    fun createQualityDir(
+        hlsDir: Path,
+        quality: VideoQualityConfig,
+        videoId: UUID
+    ): Path {
+        val qualityDir = hlsDir.resolve(quality.name)
+        Files.createDirectories(qualityDir)
+        logger.debug("Created quality directory: {} for video {}", qualityDir, videoId)
+        return qualityDir
     }
 
     fun downloadVideoFromMinio(tempDir: Path, videoStream: InputStream): Path {
@@ -40,7 +52,7 @@ class FileManagementService(
         return originalFile
     }
 
-    fun uploadHlsFiles(hlsDir: Path, qualityName: String, pathPrefix: String) {
+    fun uploadHlsQualityDir(hlsDir: Path, qualityName: String, pathPrefix: String) {
         Files.walk(hlsDir).forEach { file ->
             if (Files.isRegularFile(file)) {
                 val fileName = file.fileName.toString()
@@ -61,7 +73,6 @@ class FileManagementService(
 
     fun uploadMasterPlaylist(path: String, content: String) {
         val contentBytes = content.toByteArray()
-
         minIoService
             .uploadFile(
                 "$path/master.m3u8",
@@ -76,8 +87,7 @@ class FileManagementService(
         outputFile: Path,
         objectPath: String
     ): Either<Failure, Unit> {
-        return Files
-            .newInputStream(outputFile)
+        return Files.newInputStream(outputFile)
             .use { inputStream ->
                 minIoService.uploadFile(
                     objectPath,
