@@ -15,7 +15,9 @@ class Thumbnail(
     val timestampSeconds: Double,
     val createdAt: LocalDateTime = LocalDateTime.now(),
     @Enumerated(EnumType.STRING)
-    val thumbnailType: ThumbnailType,
+    val size: ThumbnailSize,
+    @Enumerated(EnumType.STRING)
+    val type: ThumbnailType,
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -28,8 +30,22 @@ class Thumbnail(
     override fun hashCode(): Int = javaClass.hashCode()
 }
 
-enum class ThumbnailType(val width: Int, val height: Int) {
+enum class ThumbnailSize(val width: Int, val height: Int) {
     SMALL(150, 84),
     MEDIUM(320, 180),
     LARGE(640, 360),
+}
+
+enum class ThumbnailType {
+    /** 10% of the video */
+    TEN,
+
+    /** 25% of the video */
+    TWENTY_FIVE,
+
+    /** 50% of the video */
+    FIFTY,
+
+    /** Custom uploaded thumbnail */
+    CUSTOM
 }

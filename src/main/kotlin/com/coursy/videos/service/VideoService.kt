@@ -8,14 +8,15 @@ import com.coursy.videos.dto.MetadataResponse
 import com.coursy.videos.dto.StreamData
 import com.coursy.videos.dto.StreamingResult
 import com.coursy.videos.dto.toResponse
-import com.coursy.videos.failure.Failure
-import com.coursy.videos.failure.FileFailure
-import com.coursy.videos.failure.MetadataFailure
-import com.coursy.videos.failure.RangeFailure
+import com.coursy.videos.failure.*
 import com.coursy.videos.model.Metadata
 import com.coursy.videos.model.ProcessingStatus
+import com.coursy.videos.model.ThumbnailSize
+import com.coursy.videos.model.ThumbnailType
 import com.coursy.videos.repository.MetadataRepository
 import com.coursy.videos.repository.MetadataSpecification
+import com.coursy.videos.repository.ThumbnailRepository
+import com.coursy.videos.repository.ThumbnailSpecification
 import com.coursy.videos.types.ContentType
 import com.coursy.videos.types.FileName
 import com.coursy.videos.utils.toEither
@@ -39,6 +40,7 @@ import kotlin.jvm.optionals.getOrElse
 class VideoService(
     private val minioService: MinIOService,
     private val metadataRepository: MetadataRepository,
+    private val thumbnailRepository: ThumbnailRepository,
     private val pagedResourcesAssembler: PagedResourcesAssembler<MetadataResponse>,
     private val videoProcessingService: VideoProcessingService
 ) {
@@ -224,7 +226,30 @@ class VideoService(
                     }
                 }
             }
+    }
 
+    fun getThumbnail(
+        videoId: UUID,
+        size: ThumbnailSize,
+        type: ThumbnailType,
+    ): Either<Failure, InputStream> {
+        val metadata = metadataRepository
+            .findById(videoId)
+            .getOrElse { return MetadataFailure.NotFound.left() }
+
+        val thumbnailSpec = ThumbnailSpecification
+            .builder()
+            .metadata(metadata)
+            .size(size)
+            .type(type)
+            .build()
+        val thumbnail = thumbnailRepository
+            .findOne(thumbnailSpec)
+            .getOrElse { return ThumbnailFailure.NotFound.left() }
+
+        val path = thumbnail.path
+
+        return minioService.getFileStream(path)
     }
 
     private fun fileAlreadyExists(

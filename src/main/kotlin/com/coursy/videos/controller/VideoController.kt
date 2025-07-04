@@ -2,6 +2,8 @@ package com.coursy.videos.controller
 
 import com.coursy.videos.dto.MetadataResponse
 import com.coursy.videos.dto.VideoUploadRequest
+import com.coursy.videos.model.ThumbnailSize
+import com.coursy.videos.model.ThumbnailType
 import com.coursy.videos.service.VideoService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
@@ -10,6 +12,7 @@ import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
+import org.springframework.core.io.InputStreamResource
 import org.springframework.http.*
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody
@@ -280,7 +283,24 @@ class VideoController(
         ]
     )
     @GetMapping("/{id}/thumbnail")
-    fun getVideoThumbnail(@PathVariable id: String): ResponseEntity<Any> {
-        TODO()
+    fun getVideoThumbnail(
+        @PathVariable id: UUID,
+        @RequestParam size: ThumbnailSize,
+        @RequestParam type: ThumbnailType
+    ): ResponseEntity<Any> {
+        return videoService.getThumbnail(id, size, type)
+            .fold(
+                { failure ->
+                    ResponseEntity.badRequest()
+                        .contentType(MediaType.TEXT_PLAIN)
+                        .body(failure.message())
+                },
+                { inputStream ->
+                    val resource = InputStreamResource(inputStream)
+                    ResponseEntity.ok()
+                        .contentType(MediaType.IMAGE_JPEG)
+                        .body(resource)
+                }
+            )
     }
 }

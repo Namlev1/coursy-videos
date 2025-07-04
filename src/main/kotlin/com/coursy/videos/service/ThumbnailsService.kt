@@ -6,6 +6,7 @@ import arrow.core.right
 import com.coursy.videos.failure.Failure
 import com.coursy.videos.model.Metadata
 import com.coursy.videos.model.Thumbnail
+import com.coursy.videos.model.ThumbnailSize
 import com.coursy.videos.model.ThumbnailType
 import org.springframework.stereotype.Service
 import java.nio.file.Path
@@ -26,13 +27,13 @@ class ThumbnailsService(
 
         // Generate thumbnails at different timestamps (10%, 25%, 50% of video)
         val timestamps = listOf(
-            videoDuration * 0.1,
-            videoDuration * 0.25,
-            videoDuration * 0.5
+            Pair(videoDuration * 0.1, ThumbnailType.TEN),
+            Pair(videoDuration * 0.25, ThumbnailType.TWENTY_FIVE),
+            Pair(videoDuration * 0.5, ThumbnailType.FIFTY)
         )
 
-        for (timestamp in timestamps) {
-            for (size in ThumbnailType.entries) {
+        for ((timestamp, type) in timestamps) {
+            for (size in ThumbnailSize.entries) {
                 val outputFile = outputDir.resolve("${timestamp.toInt()}_${size.name.lowercase()}.jpg")
 
                 fFmpegService
@@ -46,9 +47,10 @@ class ThumbnailsService(
                 thumbnails.add(
                     Thumbnail(
                         metadata = metadata,
-                        path = outputFile.toString(),
+                        path = objectPath,
                         timestampSeconds = timestamp,
-                        thumbnailType = size,
+                        size = size,
+                        type = type
                     )
                 )
             }
