@@ -2,7 +2,7 @@ spring:
   application:
     name: client-video-service
   datasource:
-    url: jdbc:postgresql://localhost:9010/videos_db
+    url: jdbc:postgresql://localhost:5432/videos_db
     username: postgres
     password: postgres
   jpa:
@@ -13,6 +13,8 @@ spring:
       max-file-size: 500MB        # Maximum size for a single file
       max-request-size: 500MB     # Maximum size for the entire request
       enabled: true
+server:
+  port: 8084
     
 minio:
   endpoint: ${MINIO_ENDPOINT:http://localhost:11000}
