@@ -68,7 +68,7 @@ data class MetadataResponse(
 
 fun Metadata.toResponse() = MetadataResponse(
     id = this.id,
-    title = this.title,
+    title = this.fileName,
     path = this.path,
     course = this.course,
     userId = this.userId,

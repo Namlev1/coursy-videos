@@ -56,9 +56,7 @@ class VideoController(
     ): ResponseEntity<Any> {
         return videoService
             .saveVideo(
-                request.file,
-                request.userId,
-                request.courseName
+                request
             )
             .fold(
                 { failure ->

@@ -14,7 +14,13 @@ class Metadata(
     val id: UUID = UUID.randomUUID(),
 
     @Column(nullable = false)
-    val title: FileName,
+    val fileName: FileName,
+
+    @Column(nullable = false)
+    val title: String,
+
+    @Column(nullable = false)
+    val description: String,
 
     @Column(nullable = false)
     val path: String, // MinIO object key
@@ -48,6 +54,6 @@ class Metadata(
     override fun hashCode(): Int = javaClass.hashCode()
 
     override fun toString(): String {
-        return "Metadata($title, $id)"
+        return "Metadata($fileName, $id)"
     }
 }

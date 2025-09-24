@@ -4,10 +4,7 @@ import arrow.core.Either
 import arrow.core.getOrElse
 import arrow.core.left
 import arrow.core.right
-import com.coursy.videos.dto.MetadataResponse
-import com.coursy.videos.dto.StreamData
-import com.coursy.videos.dto.StreamingResult
-import com.coursy.videos.dto.toResponse
+import com.coursy.videos.dto.*
 import com.coursy.videos.failure.*
 import com.coursy.videos.model.Metadata
 import com.coursy.videos.model.ProcessingStatus
@@ -28,7 +25,6 @@ import kotlinx.coroutines.launch
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.web.PagedResourcesAssembler
 import org.springframework.stereotype.Service
-import org.springframework.web.multipart.MultipartFile
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody
 import java.io.InputStream
 import java.io.OutputStream
@@ -49,13 +45,15 @@ class VideoService(
     )
 
     fun saveVideo(
-        file: MultipartFile,
-        userId: Long,
-        course: String,
+        request: VideoUploadRequest
     ): Either<Failure, MetadataResponse> {
+        val file = request.file
         if (file.isEmpty) {
             return FileFailure.Empty.left()
         }
+
+        val userId = request.userId
+        val course = request.courseName
         val fileName = FileName.fromFile(file).getOrElse { return it.left() }
         val contentType = ContentType.fromFile(file).getOrElse { return it.left() }
         val dir = "$userId/$course/${fileName.withoutExt()}"
@@ -66,12 +64,14 @@ class VideoService(
 
         // Save metadata first
         var metadata = Metadata(
-            title = fileName,
+            fileName = fileName,
             path = dir,
             course = course,
             userId = userId,
             fileSize = file.size,
-            status = ProcessingStatus.UPLOADED
+            status = ProcessingStatus.UPLOADED,
+            title = request.title,
+            description = request.description,
         )
         metadata = metadataRepository.save(metadata)
 
@@ -99,7 +99,7 @@ class VideoService(
         // TODO authorization: users can only download its videos, ADMIN can download any.
         val metadata = metadataRepository.findById(videoId).getOrElse { return FileFailure.InvalidId.left() }
         val fileSize = metadata.fileSize
-        val fileName = metadata.title
+        val fileName = metadata.fileName
 
         val path = "$userId/$course/${fileName.value}"
 
@@ -131,7 +131,7 @@ class VideoService(
         if (start >= metadata.fileSize - 1)
             return RangeFailure(start, end).left()
         val actualEnd = minOf(end, fileSize)
-        val path = "${metadata.userId}/${metadata.course}/${metadata.title}"
+        val path = "${metadata.userId}/${metadata.course}/${metadata.fileName}"
 
         return minioService
             .getFileStream(path)
