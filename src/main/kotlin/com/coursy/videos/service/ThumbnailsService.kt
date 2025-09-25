@@ -46,7 +46,6 @@ class ThumbnailsService(
 
                 thumbnails.add(
                     Thumbnail(
-                        metadata = metadata,
                         path = objectPath,
                         timestampSeconds = timestamp,
                         size = size,

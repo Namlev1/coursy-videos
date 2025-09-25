@@ -16,18 +16,10 @@ class MetadataSpecification {
     class Builder {
         private val predicates = mutableListOf<Specification<Metadata>>()
 
-        fun courseName(course: String?) = apply {
+        fun courseName(course: UUID?) = apply {
             course?.let {
                 predicates.add { root, _, cb ->
-                    cb.equal(root.get<String>("course"), it)
-                }
-            }
-        }
-
-        fun userId(userId: Long?) = apply {
-            userId?.let {
-                predicates.add { root, _, cb ->
-                    cb.equal(root.get<Long>("userId"), it)
+                    cb.equal(root.get<UUID>("course"), it)
                 }
             }
         }

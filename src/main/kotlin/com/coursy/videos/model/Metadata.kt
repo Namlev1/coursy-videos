@@ -1,9 +1,7 @@
 package com.coursy.videos.model
 
 import com.coursy.videos.types.FileName
-import jakarta.persistence.Column
-import jakarta.persistence.Entity
-import jakarta.persistence.Id
+import jakarta.persistence.*
 import org.hibernate.Hibernate
 import java.time.LocalDateTime
 import java.util.*
@@ -26,10 +24,7 @@ class Metadata(
     val path: String, // MinIO object key
 
     @Column(nullable = false)
-    val course: String,
-
-    @Column(nullable = false)
-    val userId: Long,
+    val course: UUID,
 
     @Column(nullable = false)
     val fileSize: Long,
@@ -42,6 +37,10 @@ class Metadata(
 
     @Column
     var duration: Double = 0.0,
+
+    @OneToOne
+    @JoinColumn
+    val thumbnail: Thumbnail?
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

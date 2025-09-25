@@ -1,6 +1,9 @@
 package com.coursy.videos.model
 
-import jakarta.persistence.*
+import jakarta.persistence.Entity
+import jakarta.persistence.EnumType
+import jakarta.persistence.Enumerated
+import jakarta.persistence.Id
 import org.hibernate.Hibernate
 import java.time.LocalDateTime
 import java.util.*
@@ -9,8 +12,6 @@ import java.util.*
 class Thumbnail(
     @Id
     val id: UUID = UUID.randomUUID(),
-    @ManyToOne
-    val metadata: Metadata,
     val path: String,
     val timestampSeconds: Double,
     val createdAt: LocalDateTime = LocalDateTime.now(),

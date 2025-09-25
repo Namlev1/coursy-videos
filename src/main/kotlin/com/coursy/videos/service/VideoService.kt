@@ -52,13 +52,12 @@ class VideoService(
             return FileFailure.Empty.left()
         }
 
-        val userId = request.userId
-        val course = request.courseName
+        val course = request.course
         val fileName = FileName.fromFile(file).getOrElse { return it.left() }
         val contentType = ContentType.fromFile(file).getOrElse { return it.left() }
-        val dir = "$userId/$course/${fileName.withoutExt()}"
+        val dir = "$course/${fileName.withoutExt()}"
 
-        if (fileAlreadyExists(fileName, userId, course)) {
+        if (fileAlreadyExists(fileName, course)) {
             return FileFailure.AlreadyExists.left()
         }
 
@@ -67,11 +66,11 @@ class VideoService(
             fileName = fileName,
             path = dir,
             course = course,
-            userId = userId,
             fileSize = file.size,
             status = ProcessingStatus.UPLOADED,
             title = request.title,
             description = request.description,
+            thumbnail = null
         )
         metadata = metadataRepository.save(metadata)
 
@@ -131,7 +130,7 @@ class VideoService(
         if (start >= metadata.fileSize - 1)
             return RangeFailure(start, end).left()
         val actualEnd = minOf(end, fileSize)
-        val path = "${metadata.userId}/${metadata.course}/${metadata.fileName}"
+        val path = "${metadata.course}/${metadata.fileName}"
 
         return minioService
             .getFileStream(path)
@@ -170,6 +169,15 @@ class VideoService(
                 { FileFailure.InvalidId.left() },
                 { it.toResponse().right() }
             )
+
+    fun getVideosByCourseId(courseId: UUID): List<MetadataResponse> {
+        val specification = MetadataSpecification
+            .builder()
+            .courseName(courseId)
+            .build()
+        val videos = metadataRepository.findAll(specification)
+        return videos.map { it.toResponse() }
+    }
 
     fun getPage(pageRequest: PageRequest) =
         metadataRepository.findAll(pageRequest)
@@ -254,13 +262,11 @@ class VideoService(
 
     private fun fileAlreadyExists(
         fileName: FileName,
-        userId: Long,
-        course: String,
+        course: UUID,
     ): Boolean {
         val specification = MetadataSpecification
             .builder()
             .fileName(fileName.value)
-            .userId(userId)
             .courseName(course)
             .build()
 

@@ -128,4 +128,7 @@ class MetadataController(
 
     private fun arePageParamsInvalid(page: Int, size: Int) =
         page < 0 || size <= 0
+
+    @GetMapping("/course/{courseId}")
+    fun getVideosByCourseId(@PathVariable courseId: UUID) = videoService.getVideosByCourseId(courseId)
 }
