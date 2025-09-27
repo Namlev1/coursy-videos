@@ -38,9 +38,9 @@ class Metadata(
     @Column
     var duration: Double = 0.0,
 
-    @OneToOne
-    @JoinColumn
-    val thumbnail: Thumbnail?
+    @OneToMany
+    @JoinColumn(name = "metadata_id")
+    val thumbnails: MutableList<Thumbnail> = mutableListOf(),
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

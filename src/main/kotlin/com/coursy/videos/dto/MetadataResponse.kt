@@ -25,7 +25,6 @@ data class MetadataResponse(
     val title: String,
 
     val description: String,
-    
 )
 
 fun Metadata.toResponse() = MetadataResponse(
@@ -37,5 +36,5 @@ fun Metadata.toResponse() = MetadataResponse(
     uploadedAt = this.uploadedAt,
     duration = this.duration,
     title = this.title,
-    description = this.description
+    description = this.description,
 )

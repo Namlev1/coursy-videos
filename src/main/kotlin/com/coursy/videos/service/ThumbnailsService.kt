@@ -43,15 +43,17 @@ class ThumbnailsService(
                 val objectPath = "${metadata.path}/thumbnails/${timestamp.toInt()}_${size.name.lowercase()}.jpg"
 
                 fileManagementService.uploadThumbnail(outputFile, objectPath)
+                val isPrimary = type == ThumbnailType.TEN
 
-                thumbnails.add(
-                    Thumbnail(
-                        path = objectPath,
-                        timestampSeconds = timestamp,
-                        size = size,
-                        type = type
-                    )
+                val thumbnail = Thumbnail(
+                    path = objectPath,
+                    timestampSeconds = timestamp,
+                    size = size,
+                    type = type,
+                    primary = isPrimary
                 )
+
+                thumbnails.add(thumbnail)
             }
         }
 

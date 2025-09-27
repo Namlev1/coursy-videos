@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.*
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody
 import java.util.*
 
-@CrossOrigin(origins = ["*"])
 @RestController
 @RequestMapping("/api/videos")
 @Tag(

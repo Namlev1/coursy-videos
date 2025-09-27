@@ -55,6 +55,8 @@ class VideoProcessingService(
             thumbnailRepository.saveAll(thumbnails)
             logger.info("Generated {} thumbnails for video {}", thumbnails.size, videoId)
 
+            metadata.thumbnails.addAll(thumbnails)
+            metadataRepository.save(metadata)
         }
             .fold(
                 onSuccess = {

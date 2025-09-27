@@ -1,9 +1,6 @@
 package com.coursy.videos.model
 
-import jakarta.persistence.Entity
-import jakarta.persistence.EnumType
-import jakarta.persistence.Enumerated
-import jakarta.persistence.Id
+import jakarta.persistence.*
 import org.hibernate.Hibernate
 import java.time.LocalDateTime
 import java.util.*
@@ -19,6 +16,8 @@ class Thumbnail(
     val size: ThumbnailSize,
     @Enumerated(EnumType.STRING)
     val type: ThumbnailType,
+    @Column(name = "`primary`")
+    val primary: Boolean?
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
