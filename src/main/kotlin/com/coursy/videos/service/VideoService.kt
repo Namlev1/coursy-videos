@@ -13,7 +13,6 @@ import com.coursy.videos.model.ThumbnailType
 import com.coursy.videos.repository.MetadataRepository
 import com.coursy.videos.repository.MetadataSpecification
 import com.coursy.videos.repository.ThumbnailRepository
-import com.coursy.videos.repository.ThumbnailSpecification
 import com.coursy.videos.types.ContentType
 import com.coursy.videos.types.FileName
 import com.coursy.videos.utils.toEither
@@ -55,7 +54,8 @@ class VideoService(
         val course = request.course
         val fileName = FileName.fromFile(file).getOrElse { return it.left() }
         val contentType = ContentType.fromFile(file).getOrElse { return it.left() }
-        val dir = "$course/${fileName.withoutExt()}"
+        val id = UUID.randomUUID()
+        val dir = "$course/$id"
 
         if (fileAlreadyExists(fileName, course)) {
             return FileFailure.AlreadyExists.left()
@@ -63,6 +63,7 @@ class VideoService(
 
         // Save metadata first
         var metadata = Metadata(
+            id = id,
             fileName = fileName,
             path = dir,
             course = course,
@@ -238,25 +239,23 @@ class VideoService(
     fun getThumbnail(
         videoId: UUID,
         size: ThumbnailSize,
-        type: ThumbnailType,
+        type: ThumbnailType?,
     ): Either<Failure, InputStream> {
         val metadata = metadataRepository
             .findById(videoId)
             .getOrElse { return MetadataFailure.NotFound.left() }
 
-        val thumbnailSpec = ThumbnailSpecification
-            .builder()
-            .metadata(metadata)
-            .size(size)
-            .type(type)
-            .build()
-        val thumbnail = thumbnailRepository
-            .findOne(thumbnailSpec)
-            .getOrElse { return ThumbnailFailure.NotFound.left() }
+        val findPrimary = type == null
 
-        val path = thumbnail.path
+        val thumbnail = metadata.thumbnails.find { thumbnail ->
+            when {
+                thumbnail.size != size -> false
+                findPrimary -> thumbnail.primary == true
+                else -> true
+            }
+        } ?: return ThumbnailFailure.NotFound.left()
 
-        return minioService.getFileStream(path)
+        return minioService.getFileStream(thumbnail.path)
     }
 
     private fun fileAlreadyExists(

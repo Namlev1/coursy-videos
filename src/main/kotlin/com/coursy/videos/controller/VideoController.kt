@@ -130,7 +130,7 @@ class VideoController(
 //            )
 //    }
 
-    @GetMapping("/{videoId}/stream")
+    @GetMapping("/{videoId}/master.m3u8")
     fun getMasterPlaylist(@PathVariable videoId: UUID): ResponseEntity<String> {
         return videoService
             .getMasterPlaylist(videoId)
@@ -283,7 +283,7 @@ class VideoController(
     fun getVideoThumbnail(
         @PathVariable id: UUID,
         @RequestParam size: ThumbnailSize,
-        @RequestParam type: ThumbnailType
+        @RequestParam type: ThumbnailType?
     ): ResponseEntity<Any> {
         return videoService.getThumbnail(id, size, type)
             .fold(

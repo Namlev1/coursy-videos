@@ -77,6 +77,14 @@ class ThumbnailSpecification {
             }
         }
 
+        fun primary(primary: Boolean?) = apply {
+            primary?.let {
+                predicates.add { root, _, cb ->
+                    cb.equal(root.get<Boolean?>("primary"), it)
+                }
+            }
+        }
+
         fun build(): Specification<Thumbnail> {
             return predicates.reduce { acc, spec -> acc.and(spec) }
         }
