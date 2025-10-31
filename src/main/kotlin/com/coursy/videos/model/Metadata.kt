@@ -41,6 +41,9 @@ class Metadata(
     @OneToMany
     @JoinColumn(name = "metadata_id")
     val thumbnails: MutableList<Thumbnail> = mutableListOf(),
+
+    @Column
+    val position: Int
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

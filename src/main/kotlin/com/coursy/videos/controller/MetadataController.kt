@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*
 import java.util.*
 
 @RestController
-@RequestMapping("/api/videos")
+@RequestMapping("/api/content/videos")
 @Tag(
     name = "Video Metadata Management",
     description = "API for managing video files and metadata"

@@ -71,6 +71,7 @@ class VideoService(
             status = ProcessingStatus.UPLOADED,
             title = request.title,
             description = request.description,
+            position = request.position
         )
         metadata = metadataRepository.save(metadata)
 

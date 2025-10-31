@@ -19,7 +19,7 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 import java.util.*
 
 @RestController
-@RequestMapping("/api/videos")
+@RequestMapping("/api/content/videos")
 @Tag(
     name = "Video Content",
     description = "API for uploading, downloading, streaming and accessing video content"
