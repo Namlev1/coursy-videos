@@ -6,10 +6,8 @@ import arrow.core.left
 import arrow.core.right
 import com.coursy.videos.dto.*
 import com.coursy.videos.failure.*
-import com.coursy.videos.model.Metadata
-import com.coursy.videos.model.ProcessingStatus
-import com.coursy.videos.model.ThumbnailSize
-import com.coursy.videos.model.ThumbnailType
+import com.coursy.videos.model.*
+import com.coursy.videos.repository.ContentRepository
 import com.coursy.videos.repository.MetadataRepository
 import com.coursy.videos.repository.MetadataSpecification
 import com.coursy.videos.repository.ThumbnailRepository
@@ -35,6 +33,7 @@ import kotlin.jvm.optionals.getOrElse
 class VideoService(
     private val minioService: MinIOService,
     private val metadataRepository: MetadataRepository,
+    private val contentRepository: ContentRepository,
     private val thumbnailRepository: ThumbnailRepository,
     private val pagedResourcesAssembler: PagedResourcesAssembler<MetadataResponse>,
     private val videoProcessingService: VideoProcessingService
@@ -61,6 +60,18 @@ class VideoService(
             return FileFailure.AlreadyExists.left()
         }
 
+        val courseContent = contentRepository
+            .findByCourse(request.course)
+            .mapNotNull { content ->
+                when {
+                    content.metadata != null -> content.metadata
+                    content.quiz != null -> content.quiz
+                    else -> null
+                }
+            }
+            .sortedWith { o1, o2 -> o1.position.compareTo(o2.position) }
+        val position = if (courseContent.isEmpty()) 0 else (courseContent.last().position + 1)
+
         // Save metadata first
         var metadata = Metadata(
             id = id,
@@ -71,9 +82,17 @@ class VideoService(
             status = ProcessingStatus.UPLOADED,
             title = request.title,
             description = request.description,
-            position = request.position
+            position = position
         )
         metadata = metadataRepository.save(metadata)
+
+        val content = Content(
+            course = request.course,
+            quiz = null,
+            type = MaterialType.VIDEO,
+            metadata = metadata
+        )
+        contentRepository.save(content)
 
         // Save file in MinIO
         minioService.uploadFile(

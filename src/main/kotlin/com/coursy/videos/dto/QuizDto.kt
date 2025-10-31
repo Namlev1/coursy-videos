@@ -9,7 +9,7 @@ data class QuizDto(
     val nrOfQuestions: String, // String, bo komponent tego oczekuje
     val questions: List<QuestionDto>,
     val position: Int,
-    val course: UUID,
+    val course: UUID?,
     val id: UUID?
 )
 
@@ -20,8 +20,8 @@ fun Quiz.toDto(): QuizDto {
         nrOfQuestions = this.questions.size.toString(),
         questions = this.questions.sortedBy { it.orderIndex }.map { it.toDto() },
         position = this.position,
-        course = this.course,
-        id = this.id
+        id = this.id,
+        course = null
     )
 }
 
@@ -31,7 +31,6 @@ fun QuizDto.toEntity(): Quiz {
         synopsis = this.quizSynopsis,
         passingScore = 70,
         position = this.position,
-        course = this.course
     )
 
     this.questions.forEachIndexed { index, questionDto ->

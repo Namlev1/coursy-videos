@@ -43,8 +43,8 @@ class Metadata(
     val thumbnails: MutableList<Thumbnail> = mutableListOf(),
 
     @Column
-    val position: Int
-) {
+    override var position: Int
+) : Ordered {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other == null || Hibernate.getClass(this) != Hibernate.getClass(other)) return false

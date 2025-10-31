@@ -17,5 +17,8 @@ class Content(
 
     @OneToOne
     @JoinColumn(name = "question_id")
-    val question: Question?,
+    val quiz: Quiz?,
+
+    @Column
+    val course: UUID
 )

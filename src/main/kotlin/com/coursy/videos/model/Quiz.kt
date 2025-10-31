@@ -22,11 +22,8 @@ class Quiz(
     val questions: MutableList<Question> = mutableListOf(),
 
     @Column
-    val position: Int,
-
-    @Column
-    val course: UUID,
-) {
+    override var position: Int,
+) : Ordered {
     fun addQuestion(question: Question) {
         questions.add(question)
     }
