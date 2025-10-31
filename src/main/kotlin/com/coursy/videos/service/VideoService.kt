@@ -251,6 +251,7 @@ class VideoService(
             when {
                 thumbnail.size != size -> false
                 findPrimary -> thumbnail.primary == true
+                thumbnail.type != type -> false
                 else -> true
             }
         } ?: return ThumbnailFailure.NotFound.left()
