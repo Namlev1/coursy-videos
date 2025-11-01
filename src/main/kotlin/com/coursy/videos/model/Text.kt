@@ -1,6 +1,9 @@
 package com.coursy.videos.model
 
-import jakarta.persistence.*
+import jakarta.persistence.Column
+import jakarta.persistence.Entity
+import jakarta.persistence.Id
+import jakarta.persistence.Table
 import java.util.*
 
 @Entity
@@ -12,7 +15,6 @@ class Text(
     @Column(nullable = false)
     var title: String,
 
-    @Lob
     @Column(columnDefinition = "TEXT")
     var content: String,
 
