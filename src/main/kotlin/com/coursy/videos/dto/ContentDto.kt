@@ -11,7 +11,8 @@ data class ContentDto(
     val type: MaterialType,
     val position: Int,
     val quizId: UUID?,
-    val videoId: UUID?
+    val videoId: UUID?,
+    val textId: UUID?
 )
 
 fun Content.toDto(): ContentDto {
@@ -23,7 +24,8 @@ fun Content.toDto(): ContentDto {
             type = type,
             position = metadata?.position ?: 0,
             quizId = null,
-            videoId = metadata?.id
+            videoId = metadata?.id,
+            textId = null
         )
 
         MaterialType.QUIZ -> ContentDto(
@@ -33,7 +35,19 @@ fun Content.toDto(): ContentDto {
             type = type,
             position = quiz?.position ?: 0,
             quizId = quiz?.id,
-            videoId = null
+            videoId = null,
+            textId = null
+        )
+
+        MaterialType.TEXT -> ContentDto(
+            id = id,
+            title = text?.title ?: "Untitled",
+            videoDuration = null,
+            type = type,
+            position = text?.position ?: 0,
+            quizId = null,
+            videoId = null,
+            textId = text?.id
         )
 
         else -> ContentDto(
@@ -43,7 +57,8 @@ fun Content.toDto(): ContentDto {
             type = type,
             position = 0,
             quizId = null,
-            videoId = null
+            videoId = null,
+            textId = null
         )
     }
 }

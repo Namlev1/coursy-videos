@@ -19,6 +19,10 @@ class Content(
     @JoinColumn(name = "question_id")
     val quiz: Quiz?,
 
+    @OneToOne
+    @JoinColumn(name = "text_id")
+    val text: Text?,
+
     @Column
     val course: UUID
 )

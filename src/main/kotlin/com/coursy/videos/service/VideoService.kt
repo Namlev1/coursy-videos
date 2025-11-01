@@ -90,7 +90,8 @@ class VideoService(
             course = request.course,
             quiz = null,
             type = MaterialType.VIDEO,
-            metadata = metadata
+            metadata = metadata,
+            text = null
         )
         contentRepository.save(content)
 

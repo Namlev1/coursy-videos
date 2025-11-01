@@ -54,7 +54,8 @@ class QuizService(
             course = quizDto.course,
             quiz = savedQuiz,
             type = MaterialType.QUIZ,
-            metadata = null
+            metadata = null,
+            text = null
         )
         contentRepository.save(content)
         return savedQuiz.toDto()
