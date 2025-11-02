@@ -25,4 +25,9 @@ class TextController(
     fun createNewText(@RequestBody textDto: TextDto): ResponseEntity<Any> {
         return ResponseEntity.ok(textService.saveText(textDto))
     }
+
+    @PutMapping
+    fun updateText(@RequestBody textDto: TextDto): ResponseEntity<Any> {
+        return ResponseEntity.ok(textService.updateText(textDto))
+    }
 }

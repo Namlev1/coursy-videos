@@ -25,4 +25,9 @@ class QuizController(
     fun postQuiz(@RequestBody quizDto: QuizDto): ResponseEntity<Any> {
         return ResponseEntity.ok(quizService.createQuiz(quizDto))
     }
+
+    @PutMapping
+    fun updateQuiz(@RequestBody quizDto: QuizDto): ResponseEntity<Any> {
+        return ResponseEntity.ok(quizService.updateQuiz(quizDto))
+    }
 }

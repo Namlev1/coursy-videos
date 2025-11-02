@@ -53,6 +53,21 @@ class TextService(
         return savedText.toDto()
     }
 
+    fun updateText(dto: TextDto): TextDto {
+        if (dto.id == null) {
+            throw IllegalArgumentException("Text ID must be provided for update")
+        }
+
+        val existingText = textRepository.findByIdOrNull(dto.id)
+            ?: throw IllegalArgumentException("Text with ID ${dto.id} does not exist")
+        existingText.apply {
+            title = dto.title
+            content = dto.content
+        }
+        val savedText = textRepository.save(existingText)
+        return savedText.toDto()
+    }
+
     fun getTextById(id: UUID): Either<TextFailure, TextDto> {
         val text = textRepository.findByIdOrNull(id)
             ?: return TextFailure.NotFound(id).left()

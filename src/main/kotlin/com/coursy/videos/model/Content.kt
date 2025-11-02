@@ -16,7 +16,7 @@ class Content(
     val metadata: Metadata?,
 
     @OneToOne
-    @JoinColumn(name = "question_id")
+    @JoinColumn(name = "quiz_id")
     val quiz: Quiz?,
 
     @OneToOne

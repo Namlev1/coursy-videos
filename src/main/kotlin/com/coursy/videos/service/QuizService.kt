@@ -11,6 +11,7 @@ import com.coursy.videos.model.Content
 import com.coursy.videos.model.MaterialType
 import com.coursy.videos.repository.ContentRepository
 import com.coursy.videos.repository.QuizRepository
+import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.*
@@ -58,6 +59,30 @@ class QuizService(
             text = null
         )
         contentRepository.save(content)
+        return savedQuiz.toDto()
+    }
+
+    @Transactional
+    fun updateQuiz(dto: QuizDto): QuizDto {
+        if (dto.id == null) {
+            throw IllegalArgumentException("Text ID must be provided for update")
+        }
+
+        val existingQuiz = quizRepository.findByIdOrNull(dto.id)
+            ?: throw IllegalArgumentException("Quiz with ID ${dto.id} does not exist")
+        existingQuiz.questions.clear()
+
+        existingQuiz.apply {
+            title = dto.quizTitle
+            synopsis = dto.quizSynopsis
+            position = dto.position
+        }
+        dto.questions.forEachIndexed { index, questionDto ->
+            val question = questionDto.toEntity(existingQuiz, index)
+            existingQuiz.addQuestion(question)
+        }
+
+        val savedQuiz = quizRepository.save(existingQuiz)
         return savedQuiz.toDto()
     }
 
