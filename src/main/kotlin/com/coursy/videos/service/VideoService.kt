@@ -7,10 +7,7 @@ import arrow.core.right
 import com.coursy.videos.dto.*
 import com.coursy.videos.failure.*
 import com.coursy.videos.model.*
-import com.coursy.videos.repository.ContentRepository
-import com.coursy.videos.repository.MetadataRepository
-import com.coursy.videos.repository.MetadataSpecification
-import com.coursy.videos.repository.ThumbnailRepository
+import com.coursy.videos.repository.*
 import com.coursy.videos.types.ContentType
 import com.coursy.videos.types.FileName
 import com.coursy.videos.utils.toEither
@@ -36,7 +33,8 @@ class VideoService(
     private val contentRepository: ContentRepository,
     private val thumbnailRepository: ThumbnailRepository,
     private val pagedResourcesAssembler: PagedResourcesAssembler<MetadataResponse>,
-    private val videoProcessingService: VideoProcessingService
+    private val videoProcessingService: VideoProcessingService,
+    private val videoQualityRepository: VideoQualityRepository
 ) {
     private val processingScope = CoroutineScope(
         SupervisorJob() + Dispatchers.IO
@@ -280,6 +278,12 @@ class VideoService(
         return minioService.getFileStream(thumbnail.path)
     }
 
+    fun deleteVideo(metadata: Metadata) {
+        videoQualityRepository.deleteByMetadataId(metadata.id)
+        minioService.deleteFolder(metadata.path)
+        metadataRepository.delete(metadata)
+    }
+    
     private fun fileAlreadyExists(
         fileName: FileName,
         course: UUID,

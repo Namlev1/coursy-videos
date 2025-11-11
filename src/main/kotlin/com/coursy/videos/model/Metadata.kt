@@ -38,7 +38,10 @@ class Metadata(
     @Column
     var duration: Double = 0.0,
 
-    @OneToMany
+    @OneToMany(
+        cascade = [CascadeType.ALL],
+        orphanRemoval = true
+    )
     @JoinColumn(name = "metadata_id")
     val thumbnails: MutableList<Thumbnail> = mutableListOf(),
 

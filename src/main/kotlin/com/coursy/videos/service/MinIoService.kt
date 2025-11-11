@@ -66,6 +66,31 @@ class MinIOService(
         }
     )
 
+    fun deleteFolder(folderPath: String): Either<MinIoFailure, Unit> = runCatching {
+        val objects = minioClient.listObjects(
+            ListObjectsArgs.builder()
+                .bucket(bucketName)
+                .prefix(folderPath)
+                .recursive(true)
+                .build()
+        )
+
+        objects.forEach { item ->
+            minioClient.removeObject(
+                RemoveObjectArgs.builder()
+                    .bucket(bucketName)
+                    .`object`(item.get().objectName())
+                    .build()
+            )
+        }
+    }.fold(
+        onSuccess = { Unit.right() },
+        onFailure = { exception ->
+            logger.error("Error deleting folder: $folderPath", exception)
+            MinIoFailure(exception.message).left()
+        }
+    )
+
     fun getFileStream(
         path: String,
     ): Either<MinIoFailure, InputStream> = runCatching {
