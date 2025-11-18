@@ -59,7 +59,7 @@ fun QuestionDto.toEntity(quiz: Quiz, orderIndex: Int): Question {
         orderIndex = orderIndex
     )
 
-    // Parsuj correctAnswer i stwórz odpowiedzi
+
     val correctIndices = when (val correct = this.correctAnswer) {
         is String -> setOf(correct.toInt())
         is Int -> setOf(correct)
@@ -67,9 +67,9 @@ fun QuestionDto.toEntity(quiz: Quiz, orderIndex: Int): Question {
         else -> throw IllegalArgumentException("Invalid correctAnswer format: $correct")
     }
 
-    // Dodaj odpowiedzi z właściwą relacją
+
     this.answers.forEachIndexed { index, answerContent ->
-        val isCorrect = correctIndices.contains(index + 1) // react-quiz-component używa indeksów od 1
+        val isCorrect = correctIndices.contains(index + 1)
         val answer = Answer(
             question = question,
             content = answerContent,

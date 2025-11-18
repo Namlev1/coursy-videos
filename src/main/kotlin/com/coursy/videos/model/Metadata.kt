@@ -21,7 +21,7 @@ class Metadata(
     val description: String,
 
     @Column(nullable = false)
-    val path: String, // MinIO object key
+    val path: String,
 
     @Column(nullable = false)
     val course: UUID,

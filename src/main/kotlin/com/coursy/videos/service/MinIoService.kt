@@ -11,7 +11,7 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import java.io.InputStream
 
-// TODO: Better error handling
+
 @Service
 class MinIOService(
     private val minioClient: MinioClient,

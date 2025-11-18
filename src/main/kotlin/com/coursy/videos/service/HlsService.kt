@@ -28,7 +28,7 @@ class HlsService(
         processMasterPlaylist(metadata)
     }
 
-    // todo parallel after you're done with entire method
+
     private fun processQualities(
         hlsDir: Path,
         originalVideo: Path,
@@ -53,7 +53,7 @@ class HlsService(
                         quality.resolution,
                         it.message()
                     )
-                    return // todo handle
+                    return
                 } 
 
             logger.debug(

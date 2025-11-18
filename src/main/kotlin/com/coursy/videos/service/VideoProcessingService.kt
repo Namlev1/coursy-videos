@@ -35,7 +35,7 @@ class VideoProcessingService(
 
             val duration = fFmpegService.getVideoDuration(originalVideo).getOrElse {
                 logger.error("Failed to get video duration for video $videoId: ${it.message()}")
-                return //todo handle
+                return
             }
             logger.debug("Video duration detected: {}s for video {}", duration, videoId)
             metadata.duration = duration
@@ -43,14 +43,14 @@ class VideoProcessingService(
             logger.debug("Creating temporary directories for video {}", videoId)
             val (hlsDir, thumbnailsDir) = fileManagementService.createHlsAndThumbnailDirs(tempDir)
 
-            // Use HlsService instead of processing qualities and master playlist directly
+
             hlsService.processHls(hlsDir, originalVideo, metadata)
 
             val thumbnails = thumbnailsService.generateThumbnails(originalVideo, thumbnailsDir, metadata)
                 .getOrElse {
                     logger.error("Failed to generate thumbnails for video $videoId: ${it.message()}")
                     setStatus(metadata, ProcessingStatus.FAILED)
-                    return // todo handle
+                    return 
                 }
             thumbnailRepository.saveAll(thumbnails)
             logger.info("Generated {} thumbnails for video {}", thumbnails.size, videoId)

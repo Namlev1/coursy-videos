@@ -70,7 +70,7 @@ class VideoService(
             .sortedWith { o1, o2 -> o1.position.compareTo(o2.position) }
         val position = if (courseContent.isEmpty()) 0 else (courseContent.last().position + 1)
 
-        // Save metadata first
+
         var metadata = Metadata(
             id = id,
             fileName = fileName,
@@ -93,7 +93,7 @@ class VideoService(
         )
         contentRepository.save(content)
 
-        // Save file in MinIO
+
         minioService.uploadFile(
             path = "$dir/${fileName.value}",
             inputStream = file.inputStream,
@@ -114,7 +114,7 @@ class VideoService(
         userId: Long,
         course: String,
     ): Either<Failure, StreamData> {
-        // TODO authorization: users can only download its videos, ADMIN can download any.
+
         val metadata = metadataRepository.findById(videoId).getOrElse { return FileFailure.InvalidId.left() }
         val fileSize = metadata.fileSize
         val fileName = metadata.fileName
@@ -154,16 +154,16 @@ class VideoService(
         return minioService
             .getFileStream(path)
             .map { inputStream ->
-                // Pomiń pierwsze 'start' bajtów
+
                 var skipped = 0L
                 while (skipped < start) {
-                    val toSkip = minOf(8192, start - skipped) // Skip w blokach 8KB
+                    val toSkip = minOf(8192, start - skipped)
                     val actuallySkipped = inputStream.skip(toSkip)
-                    if (actuallySkipped == 0L) break // EOF reached
+                    if (actuallySkipped == 0L) break
                     skipped += actuallySkipped
                 }
 
-                // Skopiuj tylko requested range
+
                 val bytesToCopy = actualEnd - start + 1
 
                 val streamingBody = StreamingResponseBody { outputStream ->
@@ -203,7 +203,7 @@ class VideoService(
             .map { it.toResponse() }
             .let { pagedResourcesAssembler.toModel(it) }
 
-    // todo don't download if processing is not finished
+
     fun getMasterPlaylist(videoId: UUID): Either<Failure, String> {
         val metadata = metadataRepository
             .findById(videoId)
@@ -298,8 +298,7 @@ class VideoService(
     }
 
     private fun parseRange(rangeHeader: String, fileSize: Long): Pair<Long, Long> {
-        // "bytes=0-1023" -> Pair(0, 1023)
-        // "bytes=1024-" -> Pair(1024, fileSize-1)
+
         val range = rangeHeader.removePrefix("bytes=")
         val parts = range.split("-")
         val start = parts[0].toLongOrNull() ?: 0
@@ -312,14 +311,14 @@ class VideoService(
         outputStream: OutputStream,
         maxBytes: Long,
     ) {
-        val buffer = ByteArray(8192) // 8KB buffer
+        val buffer = ByteArray(8192)
         var totalCopied = 0L
 
         while (totalCopied < maxBytes) {
             val bytesToRead = minOf(buffer.size.toLong(), maxBytes - totalCopied).toInt()
             val bytesRead = inputStream.read(buffer, 0, bytesToRead)
 
-            if (bytesRead == -1) break // EOF
+            if (bytesRead == -1) break 
 
             outputStream.write(buffer, 0, bytesRead)
             totalCopied += bytesRead

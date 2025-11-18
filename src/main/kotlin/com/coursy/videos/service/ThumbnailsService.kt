@@ -25,7 +25,7 @@ class ThumbnailsService(
 
         val thumbnails = mutableListOf<Thumbnail>()
 
-        // Generate thumbnails at different timestamps (10%, 25%, 50% of video)
+
         val timestamps = listOf(
             Pair(videoDuration * 0.1, ThumbnailType.TEN),
             Pair(videoDuration * 0.25, ThumbnailType.TWENTY_FIVE),

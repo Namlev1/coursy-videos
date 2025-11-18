@@ -29,7 +29,7 @@ class FFmpegService {
             "-b:v", "${quality.bitrate}",
             "-maxrate", "${(quality.bitrate * 1.2).toInt()}",
             "-bufsize", "${quality.bitrate * 2}",
-            "-hls_time", "6",                    // 6-seconds segments
+            "-hls_time", "6",
             "-hls_playlist_type", "vod",
             "-hls_segment_filename", outputDir.resolve("segment_%03d.ts").toString(),
             outputDir.resolve("playlist.m3u8").toString()
@@ -44,7 +44,7 @@ class FFmpegService {
             return FFmpegFailure.ProcessingError(exitCode).left()
         }
 
-        // Count segments
+
         val segmentFiles = Files.walk(outputDir)
             .filter { it.toString().endsWith(".ts") }
             .count()
@@ -86,11 +86,11 @@ class FFmpegService {
         val command = listOf(
             "ffmpeg",
             "-i", inputFile.toString(),
-            "-ss", timestamp.toString(),                   // Seek to timestamp
-            "-vframes", "1",                               // Extract 1 frame
-            "-vf", "scale=$width:$height",                 // Resize
-            "-q:v", "2",                                   // High quality (1-31, lower = better)
-            "-y",                                          // Overwrite output files
+            "-ss", timestamp.toString(),
+            "-vframes", "1",
+            "-vf", "scale=$width:$height",
+            "-q:v", "2",
+            "-y",
             outputFile.toString()
         )
 

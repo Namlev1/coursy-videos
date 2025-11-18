@@ -6,7 +6,7 @@ import java.util.*
 data class QuizDto(
     val quizTitle: String,
     val quizSynopsis: String?,
-    val nrOfQuestions: String, // String, bo komponent tego oczekuje
+    val nrOfQuestions: String,
     val questions: List<QuestionDto>,
     val position: Int,
     val course: UUID?,
